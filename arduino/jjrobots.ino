@@ -75,6 +75,61 @@ ISR(TIMER1_COMPA_vect)
     }
 }
 
+static enum control_state_e {
+  IDLE = 0,
+  RUN  = 1,
+} control_state;
+
+
+ISR(TIMER) {
+  // THIS AUTOMATA MUST NOT CHANGE STATE.
+  // Let control automata take care of state change
+
+  switch(control_state) {
+  case IDLE:
+    // spurious timer IT, ignore
+    break;
+
+  case RUN:
+    // emit STEP
+    break;
+  }
+}
+
+void start_timer(void) {
+  // compute frequency
+  // configure timer
+  // enable timer interrupt
+}
+
+void stop_timer(void) {
+  //disable timer interrupt
+  // disable timer
+}
+
+void control_automata(void) {
+
+  switch(control_state){
+  case IDLE:
+    if (digitalRead(btn1_pin)==LOW) {   // START/STOP Button pressed
+      while (digitalRead(btn1_pin)==HIGH); // START/STOP released
+    }
+    control_state = RUN;
+    start_timer();
+    // FALLTHROUGH
+
+  case RUN:
+    if (digitalRead(btn1_pin)==LOW) {   // START/STOP Button pressed
+      while (digitalRead(btn1_pin)==HIGH); // START/STOP released
+    }
+
+    stop_timer();
+    control_state = IDLE;
+    break;
+  }
+}
+
+
 void setRpm()
 {
   float temp;
@@ -90,7 +145,7 @@ void setRpm()
 	   rpm = 8;*/
       if (rpm>MAX_RPM)
 	rpm = MAX_RPM;
-      temp = (rpm/60.0)*STEPS_PER_REV;
+      temp = (rpm/60.0)*STEPS_PER_REV; // Number of steps per seconds needed
       temp = 2000000 / temp;          //  2000000 = (16000000/8) timer1 16Mhz with 1/8 preescaler
       if (period<600000)
 	period=60000;
@@ -104,9 +159,11 @@ void setRpm()
     }
 }
 
-void setup()
-{
- 
+void setup() {
+
+  timer_state = IDLE;
+  control_state = IDLE;
+
   // Setup PIN as GPIO output
   pinMode(led_pin, OUTPUT);    // LED pin
   pinMode(step_pin, OUTPUT);    // STEP pin
@@ -147,8 +204,7 @@ void setup()
   while (digitalRead(4)==LOW);
 }
 
-void loop()
-{ 
+void loop(void) {
   if (digitalRead(btn1_pin)==LOW)   // START/STOP Button pressed?
     {
       rpm = 0;
