@@ -1,3 +1,12 @@
 [submodule "arduino/StepperDriver"]
 	path = arduino/StepperDriver
 	url = https://github.com/laurb9/StepperDriver.git
+[submodule "kicad/kicad-lib"]
+	path = kicad/libs/kicad-lib
+	url = https://github.com/mcous/kicad-lib.git
+[submodule "kicad/Modules.pretty"]
+	path = kicad/libs/Modules.pretty
+	url = https://github.com/KiCad/Modules.pretty.git
+[submodule "kicad/libs/Connectors_JST.pretty"]
+	path = kicad/libs/Connectors_JST.pretty
+	url = https://github.com/KiCad/Connectors_JST.pretty.git
