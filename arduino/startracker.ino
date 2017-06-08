@@ -24,13 +24,14 @@
 
 #define COMINGUPSPEED 1.25  //milimeters that the rod comes up every complete rotation (360º). In a M8 rod/bolt is usually 1.25 mm. In a M6, only 1.00mm
 
+#include <DRV8825.h>
+
 
 //other info needed:
 //ratio between the large gear and the small one=0.2549
 
 //MEASURE THIS VALUE AS GOOD AS YOU CAN AND SET THE LENGHT BELOW
 #define LENGTH 228 //distance from the centre of the hinge to the centre of the hole for the rod in milimiters
-
 
 // Calculus here:
 #define STEP ((2*3.14159)/1436)*LENGTH //rotational velocity of the small gear
@@ -42,18 +43,56 @@
 #define STEPS_PER_REV 3200     // 200 steps motor with 1/16 microstepping
 #define MAX_RPM (RPS*60.0)   
 
-static const unsigned int led_pin = 7;
-static const unsigned int step_pin = 8;
-static const unsigned int dir_pin = 9;
-static const unsigned int enable_pin = 10;
+
+// Science here !
+static const unsigned int nr_teeth_small = 13;
+static const unsigned int nr_teeth_big = 51;
+
+static unsigned int loop_count = 0;
+
+
+static const unsigned int led_pin = 13;
+
+static const unsigned int step_pin = 3;
+static const unsigned int dir_pin = 2;
+static const unsigned int m0_pin = 5;
+static const unsigned int m1_pin = 6;
+static const unsigned int m2_pin = 7;
+
+static const unsigned int enable_pin = led_pin;
+
+// using a 200-step motor (most common)
+// pins used are DIR, STEP, MS1, MS2, MS3 in that order
+//A4988 stepper(200, 8, 9, 10, 11, 12);
+DRV8825 stepper(200, dir_pin, step_pin,
+		enable_pin,
+		m0_pin, m1_pin, m2_pin);
 
 static const unsigned int btn1_pin = 4;
-static const unsigned int btn2_pin = 11;
+static const unsigned int btn2_pin = 5;
 static const unsigned int btn3_pin = 6;
 
 static const unsigned long serial_speed = 115200UL;
 
+#ifndef DEBUG
 #define DEBUG (1)
+#endif
+
+#define ENABLE_LED_BLINK (0)
+
+#define USE_ACTIVE_WAIT (1)
+static const int use_active_wait = USE_ACTIVE_WAIT;
+static const long active_threshold = 10;
+
+static struct {
+  unsigned long period;
+  unsigned long deadline;
+  long          remain;
+  unsigned int  expired;
+} active_timer;
+
+static unsigned long global_period = 100;
+
 
 static const int fake_start = 1;
 
@@ -85,7 +124,7 @@ static enum control_state_e {
   RUN  = 1,
 } control_state;
 
-
+#if ! USE_ACTIVE_WAIT
 ISR(TIMER1_COMPA_vect) {
   // THIS AUTOMATA MUST NOT CHANGE STATE.
   // Let control automata take care of state change
@@ -103,33 +142,107 @@ ISR(TIMER1_COMPA_vect) {
     break;
   }
 }
+#endif /* USE_ACTIVE_WAIT */
 
-void start_timer(int freq) {
-  // compute frequency
-  // configure timer
-  // enable timer interrupt
+static void step_motor(void) {
+  //SET(PORTB, step_pin);
+#if DEBUG == 1
+  Serial.println("step in");
+#endif
+  
+  stepper.rotate(360);
+
+  /* digitalWrite(step_pin, HIGH); */
+  /* delayMicroseconds(2); */
+  /* digitalWrite(step_pin, LOW); */
+#if DEBUG == 1
+  Serial.println("step out");
+#endif
+
+}
+
+static void blink_led(void) {
+
+#if DEBUG == 2
+  Serial.println("blink");
+#endif
+
+  digitalWrite(led_pin, HIGH);
+  delay(10);    // Initial delay
+  digitalWrite(led_pin, LOW);
+}
+
+void start_timer(int period) {
 #if DEBUG
   Serial.println("start timer");
 #endif
 
-  noInterrupts();           // disable all interrupts
+  if (use_active_wait) {
+    active_timer.period = active_timer.remain = period;
+    active_timer.deadline = millis() + period;
+  } else {
+    // compute frequency
+    // configure timer
+    // enable timer interrupt
 
-  TCCR1A = 0;
-  TCCR1B = 0;
-  TCNT1  = 0;
+    noInterrupts();           // disable all interrupts
+
+    TCCR1A = 0;
+    TCCR1B = 0;
+    TCNT1  = 0;
 
   
-  OCR1A = (16000000/256); // 62500 ~ 1Hz
-  TCCR1B |= (1 << WGM12);   // CTC mode
-  TCCR1B |= (1 << CS12);    // 256 prescaler 
-  TIMSK1 |= (1 << OCIE1A);  // enable timer compare interrupt
+    OCR1A = (16000000/256); // 62500 ~ 1Hz
+    TCCR1B |= (1 << WGM12);   // CTC mode
+    TCCR1B |= (1 << CS12);    // 256 prescaler 
+    TIMSK1 |= (1 << OCIE1A);  // enable timer compare interrupt
 
-  interrupts();             // enable all interrupts
+    interrupts();             // enable all interrupts
+  }
+
+#if DEBUG == 2
+  Serial.print("Start Timer: ");
+  Serial.println(active_timer.remain);
+#endif
+
 }
 
 void stop_timer(void) {
+  if (use_active_wait){
+    active_timer.deadline = active_timer.remain = 0;
+  }
+
   //disable timer interrupt
   // disable timer
+}
+
+void handle_active_timer(void){
+#if DEBUG == 2
+  Serial.print("Timer: ");
+  Serial.println(active_timer.remain);
+#endif
+  if (active_timer.deadline){
+    active_timer.remain = active_timer.deadline - millis();
+  }
+
+  if (active_timer.remain <= active_threshold) {
+    active_timer.remain = active_timer.period;
+    active_timer.deadline = millis() + active_timer.period;
+    active_timer.expired++;
+    loop_count++;
+#if DEBUG
+    Serial.println("Timer expired");
+    Serial.println(active_timer.expired);
+    Serial.println(active_timer.remain);
+    Serial.println(loop_count);
+#endif
+  }
+}
+
+static void emit_motor_step(void) {
+  SET(PORTB, step_pin);
+  delayMicroseconds(2);
+  CLR(PORTB, step_pin);
 }
 
 void control_automata(void) {
@@ -142,14 +255,22 @@ void control_automata(void) {
     if (fake_start || digitalRead(btn1_pin)==LOW) {   // START/STOP Button pressed
       if (!fake_start) while (digitalRead(btn1_pin)==HIGH); // START/STOP released
       control_state = RUN;
-      start_timer();
+      start_timer(global_period);
     }
     break;
+
   case RUN:
     if (digitalRead(btn1_pin)==LOW) {   // START/STOP Button pressed
       while (digitalRead(btn1_pin)==HIGH); // START/STOP released
       stop_timer();
       control_state = IDLE;
+    } else if (active_timer.expired) {
+      active_timer.expired--;
+      //emit_motor_step();
+      step_motor();
+#if ENABLE_LED_BLINK
+      blink_led();
+#endif
     }
 
     break;
@@ -192,29 +313,42 @@ void control_automata(void) {
 /* } */
 
 void setup() {
+  // debug output
+  Serial.begin(serial_speed);
+#if DEBUG
+  Serial.println("Serial setup");
+#endif
+
+  stepper.enable();
+
+  // Set target motor RPM to 1RPM
+  stepper.setRPM(200);
+  // Set full speed mode (microstepping also works for smoother hand movement
+  stepper.setMicrostep(1);
 
   control_state = IDLE;
 
   // Setup PIN as GPIO output
   pinMode(led_pin, OUTPUT);    // LED pin
-  pinMode(step_pin, OUTPUT);    // STEP pin
-  pinMode(dir_pin, OUTPUT);    // DIR pin
-  pinMode(enable_pin, OUTPUT);   // ENABLE pin
-  
+
+
+  /* pinMode(step_pin, OUTPUT);    // STEP pin */
+  /* pinMode(dir_pin, OUTPUT);    // DIR pin */
+
+  //  pinMode(enable_pin, OUTPUT);   // ENABLE pin
+
+  /* digitalWrite(dir_pin, HIGH);     // Motor direction */
+  /* digitalWrite(step_pin, HIGH); */
+  /* while(1); */
+
   // Button input with pullups enable
   pinMode(btn1_pin, INPUT_PULLUP);
   pinMode(btn2_pin, INPUT_PULLUP);
   pinMode(btn3_pin, INPUT_PULLUP);
 
   // Initial setup for motor driver
-  digitalWrite(enable_pin, HIGH);  // Disable motor
-  digitalWrite(dir_pin, HIGH);     // Motor direction
-
-  // debug output
-  Serial.begin(serial_speed);
-#if DEBUG
-  Serial.println("Serial setup");
-#endif
+  //  digitalWrite(enable_pin, HIGH);  // Disable motor
+  /* digitalWrite(dir_pin, HIGH);     // Motor direction */
 
   digitalWrite(led_pin, HIGH);
   delay(200);    // Initial delay
@@ -239,6 +373,8 @@ void setup() {
 }
 
 void loop(void) {
+  if (use_active_wait)
+    handle_active_timer();
 
   control_automata();
 
