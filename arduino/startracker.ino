@@ -27,6 +27,10 @@
 #include <DRV8825.h>
 
 
+#ifndef DEBUG
+#define DEBUG (1)
+#endif
+
 //other info needed:
 //ratio between the large gear and the small one=0.2549
 
@@ -45,12 +49,41 @@
 
 
 // Science here !
-static const unsigned int nr_teeth_small = 13;
-static const unsigned int nr_teeth_big = 51;
+static const double nr_teeth_small = 13.0;
+static const double nr_teeth_big = 51.0;
+static const double axis_hinge_dist_mm = 200;
+
+static const double earth_rot_speed_rad_sec = 2*PI / (1440*60);
+static const double bolt_thread_mm = 1.25;
+
+
+static const unsigned int microstepping_div = 16;
+static const unsigned int nr_steps = 200 * microstepping_div;
+
+static const double stepper_gear_rad_per_step = (2*PI) / nr_steps;
+
+
+// this needs to be reset
+static struct rot_state_t {
+  unsigned long elapsed_time_millis;
+  double stepper_gear_rot_rad = 0;
+} rot_state;
+
+
+static double get_expected_stepper_rot(rot_state_t *s) {
+  const double r = tan(earth_rot_speed_rad_sec * (s->elapsed_time_millis/1000)) * axis_hinge_dist_mm * 2 * PI * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
+
+#if DEBUG
+  Serial.print("Ellapsed :");
+  Serial.print(s->elapsed_time_millis);
+  Serial.print(", ");
+  Serial.print("Expected rotation:");
+  Serial.println(r);
+#endif
+  return r;
+}
 
 static unsigned int loop_count = 0;
-
-
 static const unsigned int led_pin = 13;
 
 static const unsigned int step_pin = 3;
@@ -73,10 +106,6 @@ static const unsigned int btn2_pin = 5;
 static const unsigned int btn3_pin = 6;
 
 static const unsigned long serial_speed = 115200UL;
-
-#ifndef DEBUG
-#define DEBUG (1)
-#endif
 
 #define ENABLE_LED_BLINK (0)
 
@@ -266,8 +295,11 @@ void control_automata(void) {
       control_state = IDLE;
     } else if (active_timer.expired) {
       active_timer.expired--;
-      //emit_motor_step();
-      step_motor();
+      // emit_motor_step();
+      // step_motor();
+      rot_state.elapsed_time_millis += active_timer.period;
+      get_expected_stepper_rot(&rot_state);
+      
 #if ENABLE_LED_BLINK
       blink_led();
 #endif
