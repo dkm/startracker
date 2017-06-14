@@ -26,6 +26,22 @@
 
 #include <DRV8825.h>
 
+static const unsigned int led_pin = 13;
+
+static const unsigned int step_pin = 3;
+static const unsigned int dir_pin = 2;
+static const unsigned int m0_pin = 5;
+static const unsigned int m1_pin = 6;
+static const unsigned int m2_pin = 7;
+
+static const unsigned int enable_pin = led_pin;
+
+// using a 200-step motor (most common)
+// pins used are DIR, STEP, MS1, MS2, MS3 in that order
+//A4988 stepper(200, 8, 9, 10, 11, 12);
+DRV8825 stepper(200, dir_pin, step_pin,
+		enable_pin,
+		m0_pin, m1_pin, m2_pin);
 
 #ifndef DEBUG
 #define DEBUG (1)
@@ -49,57 +65,80 @@
 
 
 // Science here !
-static const double nr_teeth_small = 13.0;
-static const double nr_teeth_big = 51.0;
-static const double axis_hinge_dist_mm = 200;
+static const float nr_teeth_small = 11.0;
+static const float nr_teeth_big = 53.0;
+static const float axis_hinge_dist_mm = 200;
 
-static const double earth_rot_speed_rad_sec = 2*PI / (1440*60);
-static const double bolt_thread_mm = 1.25;
+// Use immediate value. Using symbolic values leads to incorrect value.
+static const float earth_rot_speed_rad_sec = 7.272205e-5; //2*PI / (1440*60);
 
+static const float bolt_thread_mm = 1.25;
+//static const float coef = 2*PI*axis_hinge_dist_mm * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
 
-static const unsigned int microstepping_div = 16;
+static const unsigned int microstepping_div = 2;
 static const unsigned int nr_steps = 200 * microstepping_div;
 
-static const double stepper_gear_rad_per_step = (2*PI) / nr_steps;
-
+static const float stepper_gear_rad_per_step = (2*PI) / nr_steps;
 
 // this needs to be reset
 static struct rot_state_t {
   unsigned long elapsed_time_millis;
-  double stepper_gear_rot_rad = 0;
+  float stepper_gear_rot_rad = 0;
 } rot_state;
 
+#define DUMP(v) do { \
+  Serial.print(#v " "); \
+  Serial.println(v, 10);			\
+} while(0)
 
-static double get_expected_stepper_rot(rot_state_t *s) {
-  const double r = tan(earth_rot_speed_rad_sec * (s->elapsed_time_millis/1000)) * axis_hinge_dist_mm * 2 * PI * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
+static void debug_long(rot_state_t *s){
+  const unsigned long ellapsed_in_sec = s->elapsed_time_millis/1000;
+  DUMP(ellapsed_in_sec);
+  DUMP(earth_rot_speed_rad_sec);
+  DUMP(axis_hinge_dist_mm);
+  DUMP(nr_teeth_big);
+  DUMP(nr_teeth_small);
+  DUMP(bolt_thread_mm);
+  DUMP(PI);
+}
+
+static float get_expected_stepper_rot(rot_state_t *s) {
+  const unsigned long ellapsed_in_sec = s->elapsed_time_millis/1000;
+  const float r = tan(earth_rot_speed_rad_sec * ellapsed_in_sec) * axis_hinge_dist_mm * 2 * PI * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
 
 #if DEBUG
-  Serial.print("Ellapsed :");
-  Serial.print(s->elapsed_time_millis);
-  Serial.print(", ");
-  Serial.print("Expected rotation:");
+  debug_long(s);
+  Serial.print("Angle final: ");
   Serial.println(r);
 #endif
   return r;
 }
 
+static unsigned int get_step_number(rot_state_t *s, float expected_rotation) {
+  const float angle_diff = expected_rotation - s->stepper_gear_rot_rad;
+  const float fsteps = angle_diff / stepper_gear_rad_per_step;
+  const int steps = floor(fsteps);
+  
+#if DEBUG
+  Serial.print("diff :");
+  Serial.print(angle_diff, 6);
+  Serial.print(" needed steps : ");
+  Serial.print(steps);
+  Serial.print(" with fsteps: ");
+  Serial.println(fsteps);
+#endif
+  return steps;
+}
+
+static void set_stepper_rotation(rot_state_t *s, float angle){
+  const unsigned int needed_steps = get_step_number(s, angle);
+  stepper.move(needed_steps);
+
+  s->stepper_gear_rot_rad = needed_steps * stepper_gear_rad_per_step;
+}
+
+
 static unsigned int loop_count = 0;
-static const unsigned int led_pin = 13;
-
-static const unsigned int step_pin = 3;
-static const unsigned int dir_pin = 2;
-static const unsigned int m0_pin = 5;
-static const unsigned int m1_pin = 6;
-static const unsigned int m2_pin = 7;
-
-static const unsigned int enable_pin = led_pin;
-
-// using a 200-step motor (most common)
-// pins used are DIR, STEP, MS1, MS2, MS3 in that order
-//A4988 stepper(200, 8, 9, 10, 11, 12);
-DRV8825 stepper(200, dir_pin, step_pin,
-		enable_pin,
-		m0_pin, m1_pin, m2_pin);
 
 static const unsigned int btn1_pin = 4;
 static const unsigned int btn2_pin = 5;
@@ -120,8 +159,7 @@ static struct {
   unsigned int  expired;
 } active_timer;
 
-static unsigned long global_period = 100;
-
+static unsigned long global_period = 1000;
 
 static const int fake_start = 1;
 
@@ -298,8 +336,9 @@ void control_automata(void) {
       // emit_motor_step();
       // step_motor();
       rot_state.elapsed_time_millis += active_timer.period;
-      get_expected_stepper_rot(&rot_state);
-      
+      const float expected_rot = get_expected_stepper_rot(&rot_state);
+      set_stepper_rotation(&rot_state, expected_rot);
+
 #if ENABLE_LED_BLINK
       blink_led();
 #endif
