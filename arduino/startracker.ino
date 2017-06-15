@@ -7,23 +7,6 @@
 // Microstepping : configured to 1/16
 // Arduino board: Pro micro (leonardo equivalent)
 
-// STEPPER DRIVER CONNECTED TO:
-// ENABLE pin: D10   (PB6)
-// DIR pin:  D9      (PB5) 
-// STEP pin: D8      (PB4)
-// Button1 : START/STOP  D4
-// Button2 : DEC   D5
-// Button3 : CHANGE ROTATION DIRECTION (go back to original position)  D6
-
-//DO NO TAKE PHOTOS WITH AN EXPOSITION LONGER THAN 5 MINUTES. THE DRIFT WOULD BE NOTICEABLE.
-
-//Theory behind this CODE
-//-----------------------------------------
-// 360º (rotation of the Earth every 1436min)
-// *Using a M8 rod coming up 1.25mm every complete rotation
-
-#define COMINGUPSPEED 1.25  //milimeters that the rod comes up every complete rotation (360º). In a M8 rod/bolt is usually 1.25 mm. In a M6, only 1.00mm
-
 #include <DRV8825.h>
 
 static const unsigned int led_pin = 13;
@@ -50,27 +33,13 @@ DRV8825 stepper(200, dir_pin, step_pin,
 //other info needed:
 //ratio between the large gear and the small one=0.2549
 
-//MEASURE THIS VALUE AS GOOD AS YOU CAN AND SET THE LENGHT BELOW
-#define LENGTH 228 //distance from the centre of the hinge to the centre of the hole for the rod in milimiters
-
-// Calculus here:
-#define STEP ((2*3.14159)/1436)*LENGTH //rotational velocity of the small gear
-
-#define RPS (STEP/(60*0.2549))/COMINGUPSPEED //rotational velocity of the large gear
-
-
-#define ZERO_SPEED 65535
-#define STEPS_PER_REV 3200     // 200 steps motor with 1/16 microstepping
-#define MAX_RPM (RPS*60.0)   
-
-
 // Science here !
 static const float nr_teeth_small = 11.0;
 static const float nr_teeth_big = 53.0;
 static const float axis_hinge_dist_mm = 200;
 
 // Use immediate value. Using symbolic values leads to incorrect value.
-static const float earth_rot_speed_rad_sec = 7.272205e-5; //2*PI / (1440*60);
+static const float earth_rot_speed_rad_msec = 7.272205e-8; //2*PI / (1440*60);
 
 static const float bolt_thread_mm = 1.25;
 //static const float coef = 2*PI*axis_hinge_dist_mm * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
@@ -94,7 +63,7 @@ static struct rot_state_t {
 static void debug_long(rot_state_t *s){
   const unsigned long ellapsed_in_sec = s->elapsed_time_millis/1000;
   DUMP(ellapsed_in_sec);
-  DUMP(earth_rot_speed_rad_sec);
+  DUMP(earth_rot_speed_rad_msec);
   DUMP(axis_hinge_dist_mm);
   DUMP(nr_teeth_big);
   DUMP(nr_teeth_small);
@@ -104,7 +73,7 @@ static void debug_long(rot_state_t *s){
 
 static float get_expected_stepper_rot(rot_state_t *s) {
   const unsigned long ellapsed_in_sec = s->elapsed_time_millis/1000;
-  const float r = tan(earth_rot_speed_rad_sec * ellapsed_in_sec) * axis_hinge_dist_mm * 2 * PI * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
+  const float r = tan(earth_rot_speed_rad_msec * s->elapsed_time_millis /* ellapsed_in_sec */) * axis_hinge_dist_mm * 2 * PI * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
 
 #if DEBUG
   debug_long(s);
@@ -134,7 +103,7 @@ static void set_stepper_rotation(rot_state_t *s, float angle){
   const unsigned int needed_steps = get_step_number(s, angle);
   stepper.move(needed_steps);
 
-  s->stepper_gear_rot_rad = needed_steps * stepper_gear_rad_per_step;
+  s->stepper_gear_rot_rad += needed_steps * stepper_gear_rad_per_step;
 }
 
 
@@ -159,10 +128,9 @@ static struct {
   unsigned int  expired;
 } active_timer;
 
-static unsigned long global_period = 1000;
+static unsigned long global_period = 500;
 
 static const int fake_start = 1;
-
 
 // BIT functions
 #define CLR(x,y) (x&=(~(1<<y)))
