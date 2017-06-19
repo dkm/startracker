@@ -9,7 +9,7 @@ include <MCAD/involute_gears.scad>
 
 // WHAT TO GENERATE?
 //generate = 0;    // GENERATE BOTH GEARS FOR VIEWING
-generate = 0;    // GENERATE STEPPER GEAR FOR PRINTING
+generate = 1;    // GENERATE STEPPER GEAR FOR PRINTING
 // generate = 2;    // GENERATE DRIVE GEAR FOR PRINTING
 
 // OPTIONS COMMON TO BOTH GEARS:
