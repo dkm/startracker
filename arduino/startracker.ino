@@ -19,6 +19,8 @@ static const unsigned int m2_pin = 7;
 
 static const unsigned int enable_pin = led_pin;
 
+static const unsigned int long_press_threshold_ms = 1000;
+
 // using a 200-step motor (most common)
 // pins used are DIR, STEP, MS1, MS2, MS3 in that order
 //A4988 stepper(200, 8, 9, 10, 11, 12);
@@ -136,27 +138,10 @@ static const int fake_start = 1;
 #define CLR(x,y) (x&=(~(1<<y)))
 #define SET(x,y) (x|=(1<<y))
 
-//uint16_t rpm;
-float rpm;
-uint16_t period;
-uint16_t userCommand=0;
-
-static bool motor_enable;
-
-/* // TIMER 1: STEP INTERRUPT */
-/* ISR(TIMER1_COMPA_vect) */
-/* { */
-/*   if (motor_enable) */
-/*     { */
-/*       SET(PORTB, step_pin); */
-/*       delayMicroseconds(2); */
-/*       CLR(PORTB, step_pin); */
-/*     } */
-/* } */
-
 static enum control_state_e {
   IDLE = 0,
   RUN  = 1,
+  RESET_POSITION = 2,
 } control_state;
 
 #if ! USE_ACTIVE_WAIT
@@ -288,9 +273,21 @@ void control_automata(void) {
   switch(control_state){
   case IDLE:
     if (fake_start || digitalRead(btn1_pin)==LOW) {   // START/STOP Button pressed
-      if (!fake_start) while (digitalRead(btn1_pin)==HIGH); // START/STOP released
-      control_state = RUN;
-      start_timer(global_period);
+      int long_press = 0;
+      if (!fake_start) {
+	unsigned long start_press = millis();
+	while (digitalRead(btn1_pin)==HIGH) {
+	  if (!long_press || (millis() - start_press >= long_press_threshold_ms)) {
+	    long_press = 1;
+	  }
+	}
+      }
+      if (long_press){
+	control_state = RESET_POSITION;
+      } else {
+	control_state = RUN;
+	start_timer(global_period);
+      }
     }
     break;
 
@@ -313,6 +310,12 @@ void control_automata(void) {
     }
 
     break;
+
+  case RESET_POSITION:
+    while(digitalRead(end_stop_pin) == LOW){
+      stepper.move(-1);
+    }
+    break;
   }
 
 #if DEBUG == 2
@@ -320,36 +323,6 @@ void control_automata(void) {
 #endif
 
 }
-
-
-/* void setRpm() */
-/* { */
-/*   float temp; */
-/*   if (rpm == 0) */
-/*     { */
-/*       ICR1 = ZERO_SPEED; */
-/*       digitalWrite(enable_pin, HIGH);  // Disable motor */
-/*     } */
-/*   else */
-/*     { */
-/*       digitalWrite(enable_pin, LOW);  // Enable motor */
-/*       /\*   if (rpm<8) */
-/* 	   rpm = 8;*\/ */
-/*       if (rpm>MAX_RPM) */
-/* 	rpm = MAX_RPM; */
-/*       temp = (rpm/60.0)*STEPS_PER_REV; // Number of steps per seconds needed */
-/*       temp = 2000000 / temp;          //  2000000 = (16000000/8) timer1 16Mhz with 1/8 preescaler */
-/*       if (period<600000) */
-/* 	period=60000; */
-/*       period = temp; */
-/*       while (TCNT1 < 30);   // Wait until a pulse to motor has finished */
-/*       //cli(); */
-/*       ICR1 = period; //+ userCommand; */
-/*       if (TCNT1 > ICR1)     // Handle when we need to reset the timer */
-/* 	TCNT1=0; */
-/*       //sei(); */
-/*     } */
-/* } */
 
 void setup() {
   // debug output
@@ -370,45 +343,15 @@ void setup() {
   // Setup PIN as GPIO output
   pinMode(led_pin, OUTPUT);    // LED pin
 
-
-  /* pinMode(step_pin, OUTPUT);    // STEP pin */
-  /* pinMode(dir_pin, OUTPUT);    // DIR pin */
-
-  //  pinMode(enable_pin, OUTPUT);   // ENABLE pin
-
-  /* digitalWrite(dir_pin, HIGH);     // Motor direction */
-  /* digitalWrite(step_pin, HIGH); */
-  /* while(1); */
-
   // Button input with pullups enable
   pinMode(btn1_pin, INPUT_PULLUP);
   pinMode(btn2_pin, INPUT_PULLUP);
   pinMode(btn3_pin, INPUT_PULLUP);
 
   // Initial setup for motor driver
-  //  digitalWrite(enable_pin, HIGH);  // Disable motor
-  /* digitalWrite(dir_pin, HIGH);     // Motor direction */
-
   digitalWrite(led_pin, HIGH);
   delay(200);    // Initial delay
   digitalWrite(led_pin, LOW);
-
-  motor_enable = false;
-  
-  /* // PWM SETUP */
-  /* // Fast PWM mode => TOP:ICR1 */
-  /* TCCR1A =(1<<WGM11);            */
-  /* //  TCCR1B = (1<<WGM13)|(1<<WGM12)|(1<<CS10);   //No Prescaler, Fast PWM */
-  /* TCCR1B = (1<<WGM13)|(1<<WGM12)|(1<<CS11);   // Prescaler 1:8, Fast PWM */
-  /* ICR1 = ZERO_SPEED; */
-  /* TIMSK1 = (1<<OCIE1A);  // Enable Timer interrupt */
-  
-  /* rpm = 0; */
-  
-  /* while (digitalRead(4)==HIGH);    // Wait until START button is pressed */
-  /* motor_enable = true; */
-  /* delay(250); */
-  /* while (digitalRead(4)==LOW); */
 }
 
 void loop(void) {
@@ -416,74 +359,4 @@ void loop(void) {
     handle_active_timer();
 
   control_automata();
-
-  /* if (digitalRead(btn1_pin)==LOW)   // START/STOP Button pressed? */
-  /*   { */
-  /*     rpm = 0; */
-  /*     userCommand=0; */
-  /*     setRpm(); */
-
-  /*     motor_enable = !motor_enable; */
-
-  /*     /\* if (motor_enable) *\/ */
-  /*     /\*   motor_enable = false; *\/ */
-  /*     /\* else *\/ */
-  /*     /\*   motor_enable = true; *\/ */
-
-  /*     while (digitalRead(btn1_pin)==LOW);   // Wait until botton release */
-  /*   } */
-    
-  /* if (digitalRead(btn3_pin)==LOW)   //  Button 3 pressed? */
-  /*   { */
-  /*     Serial.println("Coming back"); */
-	
-  /*     digitalWrite(btn3_pin, HIGH);    // Motor direction */
-
-  /*     rpm=50;  */
-  /*     setRpm(); */
-	
-  /*     if (motor_enable == 1) */
-  /* 	motor_enable = 0; */
-  /*     else */
-  /* 	motor_enable = 1; */
-         
-  /*     while (digitalRead(btn3_pin)==LOW);   // Wait until botton release */
-  /*   } */
-    
-    
-  /* if (motor_enable) */
-  /*   { */
-  /*     rpm++; */
-  /*     digitalWrite(led_pin, HIGH); */
-  /*   } */
-  /* else */
-  /*   { */
-  /*     rpm = 0; */
-  /*     digitalWrite(led_pin, LOW); */
-  /*   } */
-  /* Serial.print("RPM:"); */
-  /* Serial.print(rpm); */
-  /* Serial.print(" "); */
-  /* Serial.println(period+userCommand); */
-  /* setRpm(); */
-  /* Serial.print("100xRPS large gear:"); */
-  /* Serial.print(RPS/0.2549); */
-  /* Serial.print(" "); */
-  /* Serial.print("STEP:"); */
-  /* Serial.print(STEP); */
-  /* Serial.print(" "); */
-  /* delay(10); */
-  
-  /* if (digitalRead(btn2_pin)==LOW)   // Decrease button */
-  /*   { */
-  /*     digitalWrite(led_pin, LOW); */
-  /*     userCommand--; */
-  /*     while (digitalRead(btn2_pin)==LOW);  // Wait until released */
-  /*   } */
-  /* if (digitalRead(btn3_pin)==LOW)   // Increase button */
-  /*   { */
-  /*     digitalWrite(led_pin, LOW); */
-  /*     userCommand++; */
-  /*     while (digitalRead(btn3_pin)==LOW);  // Wait until released */
-  /*   } */
 }
