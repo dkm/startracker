@@ -9,9 +9,9 @@
 # 3D printing
 
 ## gears
-- [ ] remodel gears
-- [ ] print gears
-- [ ] test gears
+- [X] remodel gears
+- [X] print gears
+- [X] test gears
 
 ## laser
 - [ ] remodel laser holder
