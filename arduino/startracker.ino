@@ -32,6 +32,12 @@ DRV8825 stepper(200, dir_pin, step_pin,
 #define DEBUG (1)
 #endif
 
+#if DEBUG
+#define dprint(x) Serial.println(x)
+#else
+#define dprint(x)
+#endif
+
 //other info needed:
 //ratio between the large gear and the small one=0.2549
 
