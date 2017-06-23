@@ -1,3 +1,4 @@
+// -*- mode: c++; -*-
 // STARTRACKER MOTOR CONTROL: STEPPER MOTOR CONTROL FOR JJROBOTS POV DISPLAY
 // This code is designed for JJROBOTS arDusplay Stepper Motor Control board
 // Author: JJROBOTS.COM (Jose Julio & Juan Pedro)
