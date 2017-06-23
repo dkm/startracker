@@ -1,6 +1,6 @@
 BOARD_TAG    = nano328
 #ARDUINO_LIBS = LiquidCrystal
-ARDUINO_LIBS = StepperDriver
+ARDUINO_LIBS = StepperDriver Switch
 
 ARDMK_DIR:=$(HOME)/git/Arduino-Makefile
 

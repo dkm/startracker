@@ -10,3 +10,6 @@
 [submodule "kicad/libs/Connectors_JST.pretty"]
 	path = kicad/libs/Connectors_JST.pretty
 	url = https://github.com/KiCad/Connectors_JST.pretty.git
+[submodule "arduino/Switch"]
+	path = arduino/Switch
+	url = https://github.com/blackketter/Switch.git
