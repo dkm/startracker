@@ -20,14 +20,18 @@ static const unsigned int m2_pin = 7;
 
 static const unsigned int enable_pin = led_pin;
 
-static const unsigned int long_press_threshold_ms = 1000;
-
 // using a 200-step motor (most common)
 // pins used are DIR, STEP, MS1, MS2, MS3 in that order
 //A4988 stepper(200, 8, 9, 10, 11, 12);
 DRV8825 stepper(200, dir_pin, step_pin,
 		enable_pin,
 		m0_pin, m1_pin, m2_pin);
+
+// set to -1/1 to select rotation
+static const int stepper_direction = 1;
+
+#include <Switch.h>
+
 
 #ifndef DEBUG
 #define DEBUG (1)
@@ -110,7 +114,7 @@ static unsigned int get_step_number(rot_state_t *s, float expected_rotation) {
 
 static void set_stepper_rotation(rot_state_t *s, float angle){
   const unsigned int needed_steps = get_step_number(s, angle);
-  stepper.move(needed_steps);
+  stepper.move(stepper_direction > 0 ? needed_steps : -needed_steps);
 
   s->stepper_gear_rot_rad += needed_steps * stepper_gear_rad_per_step;
 }
@@ -118,9 +122,12 @@ static void set_stepper_rotation(rot_state_t *s, float angle){
 
 static unsigned int loop_count = 0;
 
-static const unsigned int btn1_pin = 4;
+static const unsigned int btn1_pin = 8;
+Switch button1Switch = Switch(btn1_pin);
+
 static const unsigned int btn2_pin = 5;
 static const unsigned int btn3_pin = 6;
+static const unsigned int end_stop_pin = 10;
 
 static const unsigned long serial_speed = 115200UL;
 
@@ -139,8 +146,6 @@ static struct {
 
 static unsigned long global_period = 500;
 
-static const int fake_start = 1;
-
 // BIT functions
 #define CLR(x,y) (x&=(~(1<<y)))
 #define SET(x,y) (x|=(1<<y))
@@ -148,7 +153,8 @@ static const int fake_start = 1;
 static enum control_state_e {
   IDLE = 0,
   RUN  = 1,
-  RESET_POSITION = 2,
+  RUN_OR_RESET = 2,
+  RESET_POSITION = 3,
 } control_state;
 
 #if ! USE_ACTIVE_WAIT
@@ -250,6 +256,8 @@ void handle_active_timer(void){
 #endif
   if (active_timer.deadline){
     active_timer.remain = active_timer.deadline - millis();
+  } else {
+    return;
   }
 
   if (active_timer.remain <= active_threshold) {
@@ -277,31 +285,45 @@ void control_automata(void) {
   Serial.println("Automata step...");
 #endif
 
+  button1Switch.poll();
+
   switch(control_state){
   case IDLE:
-    if (fake_start || digitalRead(btn1_pin)==LOW) {   // START/STOP Button pressed
-      int long_press = 0;
-      if (!fake_start) {
-	unsigned long start_press = millis();
-	while (digitalRead(btn1_pin)==HIGH) {
-	  if (!long_press || (millis() - start_press >= long_press_threshold_ms)) {
-	    long_press = 1;
-	  }
-	}
-      }
-      if (long_press){
-	control_state = RESET_POSITION;
-      } else {
-	control_state = RUN;
-	start_timer(global_period);
-      }
+    if (button1Switch.pushed()) {
+	control_state = RUN_OR_RESET;
+	dprint("Pushed: IDLE => RUN_OR_RESET");
     }
+
     break;
 
+  case RUN_OR_RESET: {
+    unsigned long reset_delay = millis() + 500;
+    control_state = RUN;
+
+    // stepper will be used in both exit states
+    stepper.enable();
+
+    while(millis() < reset_delay) {
+      button1Switch.poll();
+
+      if (button1Switch.pushed()) {
+	control_state = RESET_POSITION;
+	dprint("Pushed RUN_OR_RESET => RESET_POSITION");
+	break;
+      }
+    }
+
+    if (control_state == RUN) { // means not pushed during waiting time
+      dprint("NOT Pushed RUN_OR_RESET => RUN");
+      start_timer(global_period);
+    }
+    break;
+  }
   case RUN:
-    if (digitalRead(btn1_pin)==LOW) {   // START/STOP Button pressed
-      while (digitalRead(btn1_pin)==HIGH); // START/STOP released
+    if (button1Switch.pushed()) {
+      dprint("Short press RUN => IDLE");
       stop_timer();
+      stepper.disable();
       control_state = IDLE;
     } else if (active_timer.expired) {
       active_timer.expired--;
@@ -318,11 +340,28 @@ void control_automata(void) {
 
     break;
 
-  case RESET_POSITION:
-    while(digitalRead(end_stop_pin) == LOW){
-      stepper.move(-1);
+  case RESET_POSITION: {
+    dprint("Start RESET...");
+    unsigned long debounce_reset = millis();
+    int reset_done = 0;
+
+    while(!reset_done) {
+      stepper.move(stepper_direction > 0 ? -1 : 1);
+
+      int level = digitalRead(end_stop_pin);
+      if ( level == HIGH) {
+	debounce_reset = millis();
+      } else {
+	if (millis() - debounce_reset > 50) {
+	  reset_done = 1;
+	}
+      }
     }
+    control_state = IDLE;
+    stepper.disable();
+    dprint("Finished RESET, => IDLE");
     break;
+  }
   }
 
 #if DEBUG == 2
@@ -338,27 +377,32 @@ void setup() {
   Serial.println("Serial setup");
 #endif
 
-  stepper.enable();
-
   // Set target motor RPM to 1RPM
   stepper.setRPM(200);
   // Set full speed mode (microstepping also works for smoother hand movement
-  stepper.setMicrostep(1);
+  stepper.setMicrostep(microstepping_div);
 
   control_state = IDLE;
+  stepper.disable();
 
   // Setup PIN as GPIO output
   pinMode(led_pin, OUTPUT);    // LED pin
 
   // Button input with pullups enable
-  pinMode(btn1_pin, INPUT_PULLUP);
+  //  pinMode(btn1_pin, INPUT);
   pinMode(btn2_pin, INPUT_PULLUP);
   pinMode(btn3_pin, INPUT_PULLUP);
+  pinMode(end_stop_pin, INPUT_PULLUP);
 
   // Initial setup for motor driver
   digitalWrite(led_pin, HIGH);
   delay(200);    // Initial delay
   digitalWrite(led_pin, LOW);
+
+#if DEBUG
+  Serial.println("Setup finished, starting loop");
+#endif
+
 }
 
 void loop(void) {
