@@ -1,14 +1,13 @@
-
-laser_pen_diam = 9;
+laser_pen_diam = 14.5;
 
 holder_spacing=60;
 
-holder_len = 14;
+holder_len = 18;
 holder_width = 5;
 holder_height = laser_pen_diam + 4;
 
 module pico_haut(){
-translate(v=[holder_len/2,0,.5]){
+translate(v=[holder_len/2,0,5]){
                     rotate(a=90, v=[1,0,0]) {
                         cylinder(h=holder_width,
                                         d=2,center=true, $fn=20);
@@ -17,13 +16,13 @@ translate(v=[holder_len/2,0,.5]){
 }
 
 module start_stop_cyl(){
-        translate(v=[holder_len/2, 0, .5]){
+        translate(v=[holder_len/2-.5, 0, 3]){
             rotate(a=90, v=[1,0,0]) {
                 cylinder(h=holder_width,
                                 d=1.8,center=true, $fn=20);
             }
         }
-        translate(v=[holder_len/4, 0, -holder_height/2+.5]){
+        translate(v=[holder_len/11, 0, -holder_height/2+.5]){
             rotate(a=90, v=[1,0,0]) {
                 cylinder(h=holder_width,
                                 d=1.8,center=true, $fn=20);
@@ -63,6 +62,7 @@ module holder(pos_y) {
         union(){
             difference() {
                 holder_base();
+                
                 translate(v=[2,0,-1]){
                     rotate(a=90, v=[1,0,0] ){
                         cylinder(h = holder_width+1,
@@ -71,23 +71,26 @@ module holder(pos_y) {
                                         $fn=30);
                     }
                 }
-                translate(v=[holder_len/2,0,-holder_height/4]) {
+                translate(v=[holder_len/3,0,-holder_height/4]) {
                     cube([holder_len/2,
                                 holder_width+1,
-                                holder_height/2],
+                                holder_height/2+5],
                                 center=true);
                 }
             }
             start_stop_cyl();
+            
+
+
         }
     }
 }
 
 union(){
     holder(0);
-    holder(holder_spacing);
-    
-    translate(v=[-holder_len/2,holder_spacing/2,-3]){
-        cube([5,holder_spacing+holder_width,20], center=true);
-    }
+//    holder(holder_spacing);
+//    
+//    translate(v=[-holder_len/2,holder_spacing/2,-3]){
+//        cube([5,holder_spacing+holder_width,20], center=true);
+//    }
 }
