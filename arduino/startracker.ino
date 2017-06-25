@@ -28,7 +28,7 @@ DRV8825 stepper(200, dir_pin, step_pin,
 		m0_pin, m1_pin, m2_pin);
 
 // set to -1/1 to select rotation
-static const int stepper_direction = 1;
+static const bool stepper_direction = true;
 
 #include <Switch.h>
 
@@ -126,7 +126,11 @@ static unsigned int get_step_number(rot_state_t *s, float expected_rotation) {
 
 static void set_stepper_rotation(rot_state_t *s, float angle){
   const unsigned int needed_steps = get_step_number(s, angle);
-  stepper.move(stepper_direction > 0 ? needed_steps : -needed_steps);
+  if (stepper_direction) {
+    stepper.move(needed_steps);
+  } else {
+    stepper.move(-needed_steps);
+  }
 
   s->stepper_gear_rot_rad += needed_steps * stepper_gear_rad_per_step;
 }
@@ -386,7 +390,11 @@ static void control_automata(void) {
     int reset_done = 0;
 
     while(!reset_done) {
-      stepper.move(stepper_direction > 0 ? -1 : 1);
+      if (stepper_direction) {
+	stepper.move(-1);
+      } else {
+	stepper.move(1);
+      }
 
       int level = digitalRead(end_stop_pin);
       if ( level == HIGH) {
