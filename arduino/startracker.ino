@@ -32,15 +32,27 @@ static const int stepper_direction = 1;
 
 #include <Switch.h>
 
-
+// For things that could have real impact on execution
 #ifndef DEBUG
-#define DEBUG (1)
+#define DEBUG (0)
+#endif
+
+// For very light debug that has *no* chance to interfere
+// significatively with execution
+#ifndef WEAK_DEBUG
+#define WEAK_DEBUG (1)
 #endif
 
 #if DEBUG
 #define dprint(x) Serial.println(x)
 #else
 #define dprint(x)
+#endif
+
+#if WEAK_DEBUG
+#define dwprint(x) Serial.println(x)
+#else
+#define dwprint(x)
 #endif
 
 //other info needed:
@@ -279,6 +291,28 @@ static void emit_motor_step(void) {
   delayMicroseconds(2);
   CLR(PORTB, step_pin);
 }
+#if WEAK_DEBUG
+static bool new_state = true;
+
+#define STATE(name)				\
+  if (new_state) {				\
+    Serial.print("ENTERING STATE: ");		\
+    Serial.println(#name);			\
+    new_state = false;				\
+  }
+#define NEXT_STATE(name)			\
+  do {						\
+    new_state = true;				\
+    control_state = name;			\
+  } while(0)
+    
+#else
+#define STATE(name)
+#define NEXT_STATE(name)			\
+  control_state = name;
+
+#endif
+
 
 void control_automata(void) {
 #if DEBUG == 2
@@ -289,16 +323,18 @@ void control_automata(void) {
 
   switch(control_state){
   case IDLE:
+    STATE(IDLE);
     if (button1Switch.pushed()) {
-	control_state = RUN_OR_RESET;
-	dprint("Pushed: IDLE => RUN_OR_RESET");
+      NEXT_STATE(RUN_OR_RESET);
+      dwprint("Pushed: IDLE => RUN_OR_RESET");
     }
 
     break;
 
   case RUN_OR_RESET: {
+    STATE(RUN_OR_RESET);
     unsigned long reset_delay = millis() + 500;
-    control_state = RUN;
+    NEXT_STATE(RUN);
 
     // stepper will be used in both exit states
     stepper.enable();
@@ -307,24 +343,25 @@ void control_automata(void) {
       button1Switch.poll();
 
       if (button1Switch.pushed()) {
-	control_state = RESET_POSITION;
-	dprint("Pushed RUN_OR_RESET => RESET_POSITION");
+	NEXT_STATE(RESET_POSITION);
+	dwprint("Pushed RUN_OR_RESET => RESET_POSITION");
 	break;
       }
     }
 
     if (control_state == RUN) { // means not pushed during waiting time
-      dprint("NOT Pushed RUN_OR_RESET => RUN");
+      dwprint("NOT Pushed RUN_OR_RESET => RUN");
       start_timer(global_period);
     }
     break;
   }
   case RUN:
+    STATE(RUN);
     if (button1Switch.pushed()) {
-      dprint("Short press RUN => IDLE");
+      dwprint("Short press RUN => IDLE");
       stop_timer();
       stepper.disable();
-      control_state = IDLE;
+      NEXT_STATE(IDLE);
     } else if (active_timer.expired) {
       active_timer.expired--;
       // emit_motor_step();
@@ -341,7 +378,7 @@ void control_automata(void) {
     break;
 
   case RESET_POSITION: {
-    dprint("Start RESET...");
+    STATE(RESET_POSITION);
     unsigned long debounce_reset = millis();
     int reset_done = 0;
 
@@ -357,9 +394,9 @@ void control_automata(void) {
 	}
       }
     }
-    control_state = IDLE;
+    NEXT_STATE(IDLE);
     stepper.disable();
-    dprint("Finished RESET, => IDLE");
+    dwprint("Finished RESET, => IDLE");
     break;
   }
   }
@@ -373,16 +410,16 @@ void control_automata(void) {
 void setup() {
   // debug output
   Serial.begin(serial_speed);
-#if DEBUG
-  Serial.println("Serial setup");
-#endif
+
+  dwprint("Serial setup");
 
   // Set target motor RPM to 1RPM
   stepper.setRPM(200);
   // Set full speed mode (microstepping also works for smoother hand movement
   stepper.setMicrostep(microstepping_div);
+  dwprint("Microstepping is");
+  dwprint(microstepping_div);
 
-  control_state = IDLE;
   stepper.disable();
 
   // Setup PIN as GPIO output
@@ -395,14 +432,11 @@ void setup() {
   pinMode(end_stop_pin, INPUT_PULLUP);
 
   // Initial setup for motor driver
-  digitalWrite(led_pin, HIGH);
-  delay(200);    // Initial delay
-  digitalWrite(led_pin, LOW);
+  // digitalWrite(led_pin, HIGH);
+  // delay(200);    // Initial delay
+  // digitalWrite(led_pin, LOW);
 
-#if DEBUG
-  Serial.println("Setup finished, starting loop");
-#endif
-
+  dwprint("Setup finished, starting loop");
 }
 
 void loop(void) {
