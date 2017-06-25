@@ -159,65 +159,66 @@ static struct {
 static unsigned long global_period = 500;
 
 // BIT functions
-#define CLR(x,y) (x&=(~(1<<y)))
-#define SET(x,y) (x|=(1<<y))
+// #define CLR(x,y) (x&=(~(1<<y)))
+// #define SET(x,y) (x|=(1<<y))
 
 static enum control_state_e {
+  STARTUP = -1,
   IDLE = 0,
   RUN  = 1,
   RUN_OR_RESET = 2,
   RESET_POSITION = 3,
-} control_state;
+} control_state = STARTUP;
 
-#if ! USE_ACTIVE_WAIT
-ISR(TIMER1_COMPA_vect) {
-  // THIS AUTOMATA MUST NOT CHANGE STATE.
-  // Let control automata take care of state change
-#if DEBUG
-  Serial.println("in ISR");
-#endif
+// #if ! USE_ACTIVE_WAIT
+// ISR(TIMER1_COMPA_vect) {
+//   // THIS AUTOMATA MUST NOT CHANGE STATE.
+//   // Let control automata take care of state change
+// #if DEBUG
+//   Serial.println("in ISR");
+// #endif
 
-  switch(control_state) {
-  case IDLE:
-    // spurious timer IT, ignore
-    break;
+//   switch(control_state) {
+//   case IDLE:
+//     // spurious timer IT, ignore
+//     break;
 
-  case RUN:
-    // emit STEP
-    break;
-  }
-}
-#endif /* USE_ACTIVE_WAIT */
+//   case RUN:
+//     // emit STEP
+//     break;
+//   }
+// }
+// #endif /* USE_ACTIVE_WAIT */
 
-static void step_motor(void) {
-  //SET(PORTB, step_pin);
-#if DEBUG == 1
-  Serial.println("step in");
-#endif
+// static void step_motor(void) {
+//   //SET(PORTB, step_pin);
+// #if DEBUG == 1
+//   Serial.println("step in");
+// #endif
   
-  stepper.rotate(360);
+//   stepper.rotate(360);
 
-  /* digitalWrite(step_pin, HIGH); */
-  /* delayMicroseconds(2); */
-  /* digitalWrite(step_pin, LOW); */
-#if DEBUG == 1
-  Serial.println("step out");
-#endif
+//   /* digitalWrite(step_pin, HIGH); */
+//   /* delayMicroseconds(2); */
+//   /* digitalWrite(step_pin, LOW); */
+// #if DEBUG == 1
+//   Serial.println("step out");
+// #endif
 
-}
+// }
 
-static void blink_led(void) {
+// static void blink_led(void) {
 
-#if DEBUG == 2
-  Serial.println("blink");
-#endif
+// #if DEBUG == 2
+//   Serial.println("blink");
+// #endif
 
-  digitalWrite(led_pin, HIGH);
-  delay(10);    // Initial delay
-  digitalWrite(led_pin, LOW);
-}
+//   digitalWrite(led_pin, HIGH);
+//   delay(10);    // Initial delay
+//   digitalWrite(led_pin, LOW);
+// }
 
-void start_timer(int period) {
+static void start_timer(int period) {
 #if DEBUG
   Serial.println("start timer");
 #endif
@@ -252,7 +253,7 @@ void start_timer(int period) {
 
 }
 
-void stop_timer(void) {
+static void stop_timer(void) {
   if (use_active_wait){
     active_timer.deadline = active_timer.remain = 0;
   }
@@ -261,11 +262,13 @@ void stop_timer(void) {
   // disable timer
 }
 
-void handle_active_timer(void){
+static void handle_active_timer(void){
+
 #if DEBUG == 2
   Serial.print("Timer: ");
   Serial.println(active_timer.remain);
 #endif
+
   if (active_timer.deadline){
     active_timer.remain = active_timer.deadline - millis();
   } else {
@@ -286,11 +289,6 @@ void handle_active_timer(void){
   }
 }
 
-static void emit_motor_step(void) {
-  SET(PORTB, step_pin);
-  delayMicroseconds(2);
-  CLR(PORTB, step_pin);
-}
 #if WEAK_DEBUG
 static bool new_state = true;
 
@@ -313,8 +311,8 @@ static bool new_state = true;
 
 #endif
 
+static void control_automata(void) {
 
-void control_automata(void) {
 #if DEBUG == 2
   Serial.println("Automata step...");
 #endif
@@ -322,6 +320,11 @@ void control_automata(void) {
   button1Switch.poll();
 
   switch(control_state){
+  case STARTUP: // Should happen only once
+    STATE(STARTUP);
+    NEXT_STATE(IDLE);
+    break;
+
   case IDLE:
     STATE(IDLE);
     if (button1Switch.pushed()) {
