@@ -69,7 +69,7 @@ static const float earth_rot_speed_rad_msec = 7.272205e-8; //2*PI / (1440*60);
 static const float bolt_thread_mm = 1.25;
 //static const float coef = 2*PI*axis_hinge_dist_mm * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
 
-static const unsigned int microstepping_div = 2;
+static const unsigned int microstepping_div = 16;
 static const unsigned int nr_steps = 200 * microstepping_div;
 
 static const float stepper_gear_rad_per_step = (2*PI) / nr_steps;
@@ -156,7 +156,7 @@ static struct {
   unsigned int  expired;
 } active_timer;
 
-static unsigned long global_period = 500;
+static unsigned long global_period = 50;
 
 // BIT functions
 // #define CLR(x,y) (x&=(~(1<<y)))
