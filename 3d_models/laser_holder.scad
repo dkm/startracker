@@ -20,11 +20,11 @@ module pad(l,h,z) {
 module screw_hole(y,z) {
     translate(v=[-9,y,z])
         rotate(a=90, v=[0,1,0]){
-            cylinder(h=4, d=1.8*3.2, $fn=6);
+            cylinder(h=2.5, d=1.8*3.2, $fn=6);
         }
     translate(v=[-20,y,z]){
         rotate(a=90, v=[0,1,0]){
-            #cylinder(h=30, d=3.2,$fn=10);
+            cylinder(h=30, d=3.2,$fn=10);
         }            
     }
 }
