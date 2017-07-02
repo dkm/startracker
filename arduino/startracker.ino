@@ -14,9 +14,9 @@ static const unsigned int led_pin = 13;
 
 static const unsigned int step_pin = 3;
 static const unsigned int dir_pin = 2;
-static const unsigned int m0_pin = 5;
-static const unsigned int m1_pin = 6;
-static const unsigned int m2_pin = 7;
+static const unsigned int m0_pin = 6;
+static const unsigned int m1_pin = 5;
+static const unsigned int m2_pin = 4;
 
 static const unsigned int enable_pin = led_pin;
 
