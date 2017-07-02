@@ -1,10 +1,10 @@
 # Electronic
-- [ ] prototype on breadboard:
-  - [ ] power motor and arduino from 12V
-  - [ ] use button and endstop to do a reset
-- [ ] finish PCB design
-- [ ] create PCB (engrave, drill, solder)
-- [ ] test PCB
+- [X] prototype on breadboard:
+  - [X] power motor and arduino from 12V
+  - [X] use button and endstop to do a reset
+- [X] finish PCB design
+- [X] create PCB (engrave, drill, solder)
+- [X] test PCB
 
 # 3D printing
 
@@ -14,8 +14,8 @@
 - [X] test gears
 
 ## laser
-- [ ] remodel laser holder
-- [ ] print laser holder
+- [X] remodel laser holder
+- [X] print laser holder
 - [ ] test laser holder
 
 ## rod holder
@@ -29,12 +29,12 @@
 - [ ] assemble/test box
 
 # Mecanics
-- [ ] plan for assembly
-- [ ] assemble
+- [X] plan for assembly
+- [X] assemble
 
 # Software
-- [ ] first proto that only drive the gear
-- [ ] second proto that can do reset
+- [X] first proto that only drive the gear
+- [X] second proto that can do reset
 
 # general
 - [ ] test
