@@ -59,8 +59,11 @@ static const bool stepper_direction = true;
 //ratio between the large gear and the small one=0.2549
 
 // Science here !
-static const float nr_teeth_small = 11.0;
-static const float nr_teeth_big = 53.0;
+#include "teeth_config.h"
+
+static const float nr_teeth_small = CONFIG_TEETH_SMALL; // 13.0
+static const float nr_teeth_big = CONFIG_TEETH_BIG; // 51.0
+
 static const float axis_hinge_dist_mm = 200;
 
 // Use immediate value. Using symbolic values leads to incorrect value.
@@ -80,10 +83,10 @@ static struct rot_state_t {
   float stepper_gear_rot_rad = 0;
 } rot_state;
 
-#define DUMP(v) do { \
-  Serial.print(#v " "); \
-  Serial.println(v, 10);			\
-} while(0)
+#define DUMP(v) do {				\
+    Serial.print(#v " ");			\
+    Serial.println(v, 10);			\
+  } while(0)
 
 static void debug_long(rot_state_t *s){
   const unsigned long ellapsed_in_sec = s->elapsed_time_millis/1000;
