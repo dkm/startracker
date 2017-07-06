@@ -89,8 +89,8 @@ static struct rot_state_t {
   } while(0)
 
 static void debug_long(rot_state_t *s){
-  const unsigned long ellapsed_in_sec = s->elapsed_time_millis/1000;
-  DUMP(ellapsed_in_sec);
+  const unsigned long ellapsed_in_msec = s->elapsed_time_millis;
+  DUMP(ellapsed_in_msec);
   DUMP(earth_rot_speed_rad_msec);
   DUMP(axis_hinge_dist_mm);
   DUMP(nr_teeth_big);
@@ -100,8 +100,11 @@ static void debug_long(rot_state_t *s){
 }
 
 static float get_expected_stepper_rot(rot_state_t *s) {
-  const unsigned long ellapsed_in_sec = s->elapsed_time_millis/1000;
-  const float r = tan(earth_rot_speed_rad_msec * s->elapsed_time_millis /* ellapsed_in_sec */) * axis_hinge_dist_mm * 2 * PI * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
+  const float r = tan(earth_rot_speed_rad_msec * s->elapsed_time_millis /* ellapsed_in_sec */)
+    * axis_hinge_dist_mm
+    * 2 * PI
+    * nr_teeth_big
+    / (bolt_thread_mm * nr_teeth_small);
 
 #if DEBUG
   debug_long(s);
@@ -117,6 +120,8 @@ static unsigned int get_step_number(rot_state_t *s, float expected_rotation) {
   const int steps = floor(fsteps);
   
 #if DEBUG
+  Serial.print("current rot:");
+  Serial.println(s->stepper_gear_rot_rad, 6);
   Serial.print("diff :");
   Serial.print(angle_diff, 6);
   Serial.print(" needed steps : ");
@@ -163,11 +168,7 @@ static struct {
   unsigned int  expired;
 } active_timer;
 
-static unsigned long global_period = 50;
-
-// BIT functions
-// #define CLR(x,y) (x&=(~(1<<y)))
-// #define SET(x,y) (x|=(1<<y))
+static unsigned long global_period_msec = 50;
 
 static enum control_state_e {
   STARTUP = -1,
@@ -177,54 +178,6 @@ static enum control_state_e {
   RESET_POSITION = 3,
 } control_state = STARTUP;
 
-// #if ! USE_ACTIVE_WAIT
-// ISR(TIMER1_COMPA_vect) {
-//   // THIS AUTOMATA MUST NOT CHANGE STATE.
-//   // Let control automata take care of state change
-// #if DEBUG
-//   Serial.println("in ISR");
-// #endif
-
-//   switch(control_state) {
-//   case IDLE:
-//     // spurious timer IT, ignore
-//     break;
-
-//   case RUN:
-//     // emit STEP
-//     break;
-//   }
-// }
-// #endif /* USE_ACTIVE_WAIT */
-
-// static void step_motor(void) {
-//   //SET(PORTB, step_pin);
-// #if DEBUG == 1
-//   Serial.println("step in");
-// #endif
-  
-//   stepper.rotate(360);
-
-//   /* digitalWrite(step_pin, HIGH); */
-//   /* delayMicroseconds(2); */
-//   /* digitalWrite(step_pin, LOW); */
-// #if DEBUG == 1
-//   Serial.println("step out");
-// #endif
-
-// }
-
-// static void blink_led(void) {
-
-// #if DEBUG == 2
-//   Serial.println("blink");
-// #endif
-
-//   digitalWrite(led_pin, HIGH);
-//   delay(10);    // Initial delay
-//   digitalWrite(led_pin, LOW);
-// }
-
 static void start_timer(int period) {
 #if DEBUG
   Serial.println("start timer");
@@ -233,24 +186,6 @@ static void start_timer(int period) {
   if (use_active_wait) {
     active_timer.period = active_timer.remain = period;
     active_timer.deadline = millis() + period;
-  } else {
-    // compute frequency
-    // configure timer
-    // enable timer interrupt
-
-    noInterrupts();           // disable all interrupts
-
-    TCCR1A = 0;
-    TCCR1B = 0;
-    TCNT1  = 0;
-
-  
-    OCR1A = (16000000/256); // 62500 ~ 1Hz
-    TCCR1B |= (1 << WGM12);   // CTC mode
-    TCCR1B |= (1 << CS12);    // 256 prescaler 
-    TIMSK1 |= (1 << OCIE1A);  // enable timer compare interrupt
-
-    interrupts();             // enable all interrupts
   }
 
 #if DEBUG == 2
@@ -361,7 +296,7 @@ static void control_automata(void) {
 
     if (control_state == RUN) { // means not pushed during waiting time
       dwprint("NOT Pushed RUN_OR_RESET => RUN");
-      start_timer(global_period);
+      start_timer(global_period_msec);
     }
     break;
   }
