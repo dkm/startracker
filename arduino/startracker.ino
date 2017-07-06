@@ -149,8 +149,8 @@ static unsigned int loop_count = 0;
 static const unsigned int btn1_pin = 8;
 Switch button1Switch = Switch(btn1_pin);
 
-static const unsigned int btn2_pin = 5;
-static const unsigned int btn3_pin = 6;
+// static const unsigned int btn2_pin = 5;
+// static const unsigned int btn3_pin = 6;
 static const unsigned int end_stop_pin = 10;
 
 static const unsigned long serial_speed = 115200UL;
@@ -376,8 +376,8 @@ void setup() {
 
   // Button input with pullups enable
   //  pinMode(btn1_pin, INPUT);
-  pinMode(btn2_pin, INPUT_PULLUP);
-  pinMode(btn3_pin, INPUT_PULLUP);
+  // pinMode(btn2_pin, INPUT_PULLUP);
+  // pinMode(btn3_pin, INPUT_PULLUP);
   pinMode(end_stop_pin, INPUT_PULLUP);
 
   // Initial setup for motor driver
