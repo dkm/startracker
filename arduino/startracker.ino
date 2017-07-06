@@ -210,18 +210,20 @@ static void handle_active_timer(void){
   Serial.print("Timer: ");
   Serial.println(active_timer.remain);
 #endif
+  unsigned long current_time = millis();
 
   if (active_timer.deadline){
-    active_timer.remain = active_timer.deadline - millis();
+    active_timer.remain = active_timer.deadline - current_time;
   } else {
     return;
   }
 
   if (active_timer.remain <= active_threshold) {
     active_timer.remain = active_timer.period;
-    active_timer.deadline = millis() + active_timer.period;
+    active_timer.deadline = current_time + active_timer.period;
     active_timer.expired++;
     loop_count++;
+
 #if DEBUG
     Serial.println("Timer expired");
     Serial.println(active_timer.expired);
