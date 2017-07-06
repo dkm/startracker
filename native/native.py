@@ -4,8 +4,8 @@ import sys
 import numpy
 
 BOLT_THREAD = 1.25
-NR_TEETH_BIG=53
-NR_TEETH_SMALL=11
+NR_TEETH_BIG=51
+NR_TEETH_SMALL=13
 
 EARTH_SIDERAL_DAY = 1440
 HINGE_ROD_LEN = 200
@@ -40,7 +40,7 @@ def debug_from_step_angle(sangle):
 def get_step_angle_from_time(time_in_sec):
     final_angle = time_in_sec *  2 * numpy.pi / (1440*60)
     sangle = numpy.tan(final_angle) * HINGE_ROD_LEN * 2 * numpy.pi * NR_TEETH_BIG / (BOLT_THREAD * NR_TEETH_SMALL)
-    print("For {} sec, final angle is {} rad => step angle is {}".format(time_in_sec, final_angle, sangle))
+    print("For {} sec, final angle is {} rad ({} deg) => step angle is {}".format(time_in_sec, final_angle, final_angle * 360 /(2*numpy.pi), sangle))
     verif_final = debug_from_step_angle(sangle)
           
 get_step_angle_from_time(int(sys.argv[1]))
