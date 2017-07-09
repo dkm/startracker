@@ -43,6 +43,10 @@ static const bool stepper_direction = true;
 #define WEAK_DEBUG (1)
 #endif
 
+#ifndef MODERATE_DEBUG
+#define MODERATE_DEBUG (0)
+#endif
+
 #if DEBUG
 #define dprint(x) Serial.println(x)
 #else
@@ -53,6 +57,12 @@ static const bool stepper_direction = true;
 #define dwprint(x) Serial.println(x)
 #else
 #define dwprint(x)
+#endif
+
+#if MODERATE_DEBUG
+#define mprint(x) Serial.println(x)
+#else
+#define mprint(x)
 #endif
 
 //other info needed:
@@ -76,6 +86,10 @@ static const unsigned int microstepping_div = 16;
 static const unsigned int nr_steps = 200 * microstepping_div;
 
 static const float stepper_gear_rad_per_step = (2*PI) / nr_steps;
+
+#if MODERATE_DEBUG || DEBUG
+static unsigned int loop_count = 0;
+#endif
 
 // this needs to be reset
 static struct rot_state_t {
@@ -106,11 +120,20 @@ static float get_expected_stepper_rot(rot_state_t *s) {
     * nr_teeth_big
     / (bolt_thread_mm * nr_teeth_small);
 
-#if DEBUG
+#if DEBUG || MODERATE_DEBUG
+
+#if MODERATE_DEBUG
+  if (!(loop_count % 100)) {
+#endif
   debug_long(s);
+
   Serial.print("Angle final: ");
   Serial.println(r);
-#endif
+
+#if MODERATE_DEBUG
+  }
+#endif /* MODERATE_DEBUG */
+#endif /* DEBUG */
   return r;
 }
 
@@ -143,9 +166,6 @@ static void set_stepper_rotation(rot_state_t *s, float angle){
   s->stepper_gear_rot_rad += needed_steps * stepper_gear_rad_per_step;
 }
 
-
-static unsigned int loop_count = 0;
-
 static const unsigned int btn1_pin = 8;
 Switch button1Switch = Switch(btn1_pin);
 
@@ -164,11 +184,11 @@ static const long active_threshold = 10;
 static struct {
   unsigned long period;
   unsigned long deadline;
-  long          remain;
+  unsigned long remain;
   unsigned int  expired;
 } active_timer;
 
-static unsigned long global_period_msec = 50;
+static unsigned long global_period_msec = 60000;//(2*60+51)*1000;
 
 static enum control_state_e {
   STARTUP = -1,
@@ -178,12 +198,13 @@ static enum control_state_e {
   RESET_POSITION = 3,
 } control_state = STARTUP;
 
-static void start_timer(int period) {
+static void start_timer(unsigned long period) {
 #if DEBUG
   Serial.println("start timer");
 #endif
 
   if (use_active_wait) {
+    // be careful: remain is signed and period is unsigned.
     active_timer.period = active_timer.remain = period;
     active_timer.deadline = millis() + period;
   }
@@ -214,6 +235,10 @@ static void handle_active_timer(void){
 
   if (active_timer.deadline){
     active_timer.remain = active_timer.deadline - current_time;
+    if (active_timer.remain > active_timer.deadline) {
+      // unsigned underflow
+      active_timer.remain = 0;
+    }
   } else {
     return;
   }
@@ -222,7 +247,10 @@ static void handle_active_timer(void){
     active_timer.remain = active_timer.period;
     active_timer.deadline = current_time + active_timer.period;
     active_timer.expired++;
+
+#if DEBUG || MODERATE_DEBUG
     loop_count++;
+#endif
 
 #if DEBUG
     Serial.println("Timer expired");
