@@ -67,7 +67,7 @@ PCBLength       = 91.44;
 // - Largeur PCB - PCB Width
 PCBWidth        = 71.12;
 // - Heuteur pied - Feet height
-FootHeight      = 10;
+FootHeight      = 7;
 // - Diamètre pied - Foot diameter
 FootDia         = 8;
 // - Diamètre trou - Hole diameter
@@ -123,7 +123,7 @@ module RoundBox($a=Length, $b=Width, $c=Height){// Cube bords arrondis
 
 
 ////////////////////////////////// - Module Coque/Shell - //////////////////////////////////
-module Trou(){
+module TrouScratch(){
   translate([Length/4, Width/3, 0]){
     #cube([25,5,10], center=true);
   }
@@ -140,7 +140,16 @@ module Trou(){
 
 }
 
-module Coque(){//Coque - Shell
+module TrouOnOff(){
+  translate([Length/4, Width/3, 0]){
+    #cube([13.5,20,10], center=true);
+  }
+  translate([10, 10, 0]){
+    #cylinder(h=10, d=6.7, center=true);
+  }
+}
+
+module Coque(is_top){//Coque - Shell
   Thick = Thick*2;
   difference(){
     difference(){//sides decoration
@@ -154,13 +163,15 @@ module Coque(){//Coque - Shell
 		translate([Thick/2,Thick/2,Thick/2]){
 		  RoundBox($a=Length-Thick, $b=Width-Thick, $c=Height-Thick);
 		}
-		Trou();
+		if (!is_top) TrouScratch();
+		else TrouOnOff();
 	      }//Fin diff Coque
 	      difference(){//largeur Rails
 		translate([Thick+m,Thick/2,Thick/2]){// Rails
 		  RoundBox($a=Length-((2*Thick)+(2*m)), $b=Width-Thick, $c=Height-(Thick*2));
 		}//fin Rails
-		Trou();
+		if(!is_top) TrouScratch();
+		else TrouOnOff();
 		translate([((Thick+m/2)*1.55),Thick/2,Thick/2+0.1]){ // +0.1 added to avoid the artefact
 		  RoundBox($a=Length-((Thick*3)+2*m), $b=Width-Thick, $c=Height-Thick);
 		}
@@ -360,7 +371,7 @@ if(Text==1)
 if(BShell==1)
   // Coque bas - Bottom shell
   color(Couleur1){
-    Coque();
+    Coque(false);
   }
 
 
@@ -369,7 +380,7 @@ if(TShell==1)
   color( Couleur1,1){
     translate([0,Width,Height+0.2]){
       rotate([0,180,180]){
-	Coque();
+	Coque(true);
       }
     }
   }
