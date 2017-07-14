@@ -97,6 +97,38 @@ static struct rot_state_t {
   float stepper_gear_rot_rad = 0;
 } rot_state;
 
+static const unsigned int btn1_pin = 8;
+Switch button1Switch = Switch(btn1_pin);
+
+// static const unsigned int btn2_pin = 5;
+// static const unsigned int btn3_pin = 6;
+static const unsigned int end_stop_pin = 10;
+
+static const unsigned long serial_speed = 115200UL;
+
+#define ENABLE_LED_BLINK (0)
+
+#define USE_ACTIVE_WAIT (1)
+static const int use_active_wait = USE_ACTIVE_WAIT;
+static const long active_threshold = 10;
+
+static struct {
+  unsigned long period;
+  unsigned long deadline;
+  unsigned long remain;
+  unsigned int  expired;
+} active_timer;
+
+static unsigned long global_period_msec = 10000;//(2*60+51)*1000;
+
+static enum control_state_e {
+  STARTUP = -1,
+  IDLE = 0,
+  RUN  = 1,
+  RUN_OR_RESET = 2,
+  RESET_POSITION = 3,
+} control_state = STARTUP;
+
 #define DUMP(v) do {				\
     Serial.print(#v " ");			\
     Serial.println(v, 10);			\
@@ -151,6 +183,15 @@ static unsigned int get_step_number(rot_state_t *s, float expected_rotation) {
   Serial.print(steps);
   Serial.print(" with fsteps: ");
   Serial.println(fsteps);
+
+  const float round_per_minutes = (60000/global_period_msec)*fsteps*stepper_gear_rad_per_step;
+  Serial.print("RAD per minutes (stepper) : ");
+  Serial.println(round_per_minutes, 6);
+  const float round_per_minutes_drive = round_per_minutes * (nr_teeth_small / nr_teeth_big);
+  Serial.print("RAD per minutes (drive) : ");
+  Serial.println(round_per_minutes_drive, 6);
+
+
 #endif
   return steps;
 }
@@ -166,37 +207,6 @@ static void set_stepper_rotation(rot_state_t *s, float angle){
   s->stepper_gear_rot_rad += needed_steps * stepper_gear_rad_per_step;
 }
 
-static const unsigned int btn1_pin = 8;
-Switch button1Switch = Switch(btn1_pin);
-
-// static const unsigned int btn2_pin = 5;
-// static const unsigned int btn3_pin = 6;
-static const unsigned int end_stop_pin = 10;
-
-static const unsigned long serial_speed = 115200UL;
-
-#define ENABLE_LED_BLINK (0)
-
-#define USE_ACTIVE_WAIT (1)
-static const int use_active_wait = USE_ACTIVE_WAIT;
-static const long active_threshold = 10;
-
-static struct {
-  unsigned long period;
-  unsigned long deadline;
-  unsigned long remain;
-  unsigned int  expired;
-} active_timer;
-
-static unsigned long global_period_msec = 60000;//(2*60+51)*1000;
-
-static enum control_state_e {
-  STARTUP = -1,
-  IDLE = 0,
-  RUN  = 1,
-  RUN_OR_RESET = 2,
-  RESET_POSITION = 3,
-} control_state = STARTUP;
 
 static void start_timer(unsigned long period) {
 #if DEBUG
