@@ -82,7 +82,7 @@ static const float earth_rot_speed_rad_msec = 7.272205e-8; //2*PI / (1440*60);
 static const float bolt_thread_mm = 1.25;
 //static const float coef = 2*PI*axis_hinge_dist_mm * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
 
-static const unsigned int microstepping_div = 16;
+static const unsigned int microstepping_div = 32;
 static const unsigned int nr_steps = 200 * microstepping_div;
 
 static const float stepper_gear_rad_per_step = (2*PI) / nr_steps;
@@ -119,7 +119,7 @@ static struct {
   unsigned int  expired;
 } active_timer;
 
-static unsigned long global_period_msec = 10000;//(2*60+51)*1000;
+static unsigned long global_period_msec = 100;//(2*60+51)*1000;
 
 static enum control_state_e {
   STARTUP = -1,
@@ -403,7 +403,7 @@ void setup() {
   dwprint("Serial setup");
 
   // Set target motor RPM to 1RPM
-  stepper.setRPM(200);
+  stepper.setRPM(30);
   // Set full speed mode (microstepping also works for smoother hand movement
   stepper.setMicrostep(microstepping_div);
   dwprint("Microstepping is");
