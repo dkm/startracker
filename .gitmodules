@@ -13,3 +13,6 @@
 [submodule "arduino/Switch"]
 	path = arduino/Switch
 	url = https://github.com/blackketter/Switch.git
+[submodule "arduino/Arduino-Makefile"]
+	path = arduino/Arduino-Makefile
+	url = https://github.com/sudar/Arduino-Makefile.git
