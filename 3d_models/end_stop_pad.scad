@@ -1,6 +1,6 @@
 endstop_l = 27.9;
 endstop_l2 = 16.4;
-endstop_w = 9.8;
+endstop_w = 10;
 endstop_h = 15.6;
 
 module endstop() {
@@ -25,4 +25,4 @@ module pad_base(l,d,h1,h2, grip) {
 	    translate([23,0,d-endstop_l2]) #endstop();
         }
 }
-pad_base(50,30,21.8,12,1.9);
+pad_base(50,30,21.8,12,2.1);
