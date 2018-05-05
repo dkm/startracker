@@ -1,4 +1,15 @@
 // -*- mode: c++; -*-
+//
+// Startracker drives a NEMA17 for compensating the earth rotation
+// during long exposure photography.  Original code based on JjRobots
+// (see below), but everything has been rewritten since the begining
+// of this project.
+//
+// This was tested with an arduino nano.
+// Board wiring (and PCB) are available along with this code.
+// See https://framagit.org/marc/startracker
+//
+// Initial header :
 // STARTRACKER MOTOR CONTROL: STEPPER MOTOR CONTROL FOR JJROBOTS POV DISPLAY
 // This code is designed for JJROBOTS arDusplay Stepper Motor Control board
 // Author: JJROBOTS.COM (Jose Julio & Juan Pedro)
