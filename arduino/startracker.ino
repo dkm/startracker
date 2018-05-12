@@ -145,6 +145,7 @@ static enum control_state_e {
     Serial.println(v, 10);			\
   } while(0)
 
+#if DEBUG || MODERATE_DEBUG
 static void debug_long(rot_state_t *s){
   const unsigned long ellapsed_in_msec = s->elapsed_time_millis;
   DUMP(ellapsed_in_msec);
@@ -155,6 +156,7 @@ static void debug_long(rot_state_t *s){
   DUMP(bolt_thread_mm);
   DUMP(PI);
 }
+#endif
 
 static float get_expected_stepper_rot(rot_state_t *s) {
   const float r = tan(earth_rot_speed_rad_msec * s->elapsed_time_millis /* ellapsed_in_sec */)
