@@ -16,12 +16,12 @@
 ## laser
 - [X] remodel laser holder
 - [X] print laser holder
-- [ ] test laser holder
+- [X] test laser holder : Laser not powerful enough
 
 ## rod holder
-- [ ] remodel rod holder
-- [ ] print rod holder
-- [ ] test rod holder
+- [X] remodel rod holder
+- [X] print rod holder
+- [X] test rod holder
 
 ## model a box
 - [ ] model a box
@@ -37,4 +37,4 @@
 - [X] second proto that can do reset
 
 # general
-- [ ] test
+- [X] test : works, but still some fine tuning to do.
