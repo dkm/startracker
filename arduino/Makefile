@@ -21,4 +21,8 @@ ARDUINO_DIR ?= $(HOME)/arduino/arduino-1.8.5
 
 USER_LIB_PATH := $(PWD)
 
+# We don't need exact math. Let gcc be a bit more agressive.
+CFLAGS += -ffast-math
+CXXFLAGS += -ffast-math
+
 include $(ARDMK_DIR)/Arduino.mk
