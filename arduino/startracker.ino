@@ -21,42 +21,15 @@
 
 #include <DRV8825.h>
 
-static const unsigned int led_pin = 13;
-
-static const unsigned int step_pin = 3;
-static const unsigned int dir_pin = 2;
-static const unsigned int m0_pin = 6;
-static const unsigned int m1_pin = 5;
-static const unsigned int m2_pin = 4;
-
-static const unsigned int enable_pin = led_pin;
+#include "config.h"
 
 // using a 200-step motor (most common)
 // pins used are DIR, STEP, MS1, MS2, MS3 in that order
-//A4988 stepper(200, 8, 9, 10, 11, 12);
 DRV8825 stepper(200, dir_pin, step_pin,
 		enable_pin,
 		m0_pin, m1_pin, m2_pin);
 
-// set to -1/1 to select rotation
-static const bool stepper_direction = true;
-
 #include <Switch.h>
-
-// For things that could have real impact on execution
-#ifndef DEBUG
-#define DEBUG (0)
-#endif
-
-// For very light debug that has *no* chance to interfere
-// significatively with execution
-#ifndef WEAK_DEBUG
-#define WEAK_DEBUG (1)
-#endif
-
-#ifndef MODERATE_DEBUG
-#define MODERATE_DEBUG (0)
-#endif
 
 #if DEBUG
 #define dprint(x) Serial.println(x)
@@ -85,12 +58,9 @@ static const bool stepper_direction = true;
 static const float nr_teeth_small = CONFIG_TEETH_SMALL; // 13.0
 static const float nr_teeth_big = CONFIG_TEETH_BIG; // 51.0
 
-static const float axis_hinge_dist_mm = 200;
-
 // Use immediate value. Using symbolic values leads to incorrect value.
 static const float earth_rot_speed_rad_msec = 7.272205e-8; //2*PI / (1440*60);
 
-static const float bolt_thread_mm = 1.25;
 //static const float coef = 2*PI*axis_hinge_dist_mm * nr_teeth_big / (bolt_thread_mm * nr_teeth_small);
 
 static const unsigned int microstepping_div = 32;
@@ -108,14 +78,17 @@ static struct rot_state_t {
   float stepper_gear_rot_rad = 0;
 } rot_state;
 
+static void init_rot_state(struct rot_state_t *state) {
+  rot_state.stepper_gear_rot_rad = 0;
+  rot_state.elapsed_time_millis = atan(initial_rod_deploy / axis_hinge_dist_mm);
+}
+
 static const unsigned int btn1_pin = 8;
 Switch button1Switch = Switch(btn1_pin);
 
 // static const unsigned int btn2_pin = 5;
 // static const unsigned int btn3_pin = 6;
 static const unsigned int end_stop_pin = 10;
-
-static const unsigned long serial_speed = 115200UL;
 
 #define ENABLE_LED_BLINK (0)
 
@@ -203,8 +176,6 @@ static unsigned int get_step_number(rot_state_t *s, float expected_rotation) {
   const float round_per_minutes_drive = round_per_minutes * (nr_teeth_small / nr_teeth_big);
   Serial.print("RAD per minutes (drive) : ");
   Serial.println(round_per_minutes_drive, 6);
-
-
 #endif
   return steps;
 }
@@ -396,6 +367,7 @@ static void control_automata(void) {
 	}
       }
     }
+    init_rot_state(&rot_state);
     NEXT_STATE(IDLE);
     stepper.disable();
     dwprint("Finished RESET, => IDLE");
@@ -437,6 +409,8 @@ void setup() {
   // digitalWrite(led_pin, HIGH);
   // delay(200);    // Initial delay
   // digitalWrite(led_pin, LOW);
+
+  init_rot_state(&rot_state);
 
   dwprint("Setup finished, starting loop");
 }
