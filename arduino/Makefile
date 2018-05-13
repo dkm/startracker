@@ -17,7 +17,7 @@ ARDUINO_LIBS = StepperDriver Switch
 ARDMK_DIR:=$(PWD)/Arduino-Makefile
 
 # You may need to change this, depending on your local setup.
-ARDUINO_DIR := $(HOME)/arduino/arduino-1.8.5
+ARDUINO_DIR ?= $(HOME)/arduino/arduino-1.8.5
 
 USER_LIB_PATH := $(PWD)
 
