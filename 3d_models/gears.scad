@@ -9,7 +9,7 @@ include <MCAD/involute_gears.scad>
 
 // WHAT TO GENERATE?
 //generate = 0;    // GENERATE BOTH GEARS FOR VIEWING
-generate = 1;    // GENERATE STEPPER GEAR FOR PRINTING
+generate = 2;    // GENERATE STEPPER GEAR FOR PRINTING
 // generate = 2;    // GENERATE DRIVE GEAR FOR PRINTING
 
 // OPTIONS COMMON TO BOTH GEARS:
@@ -35,10 +35,10 @@ gear1_captive_nut_h = 3;
 
 // GEAR2 (LARGER GEAR, DRIVE SHAFT GEAR) OPTIONS:
 gear2_teeth = 51;
-gear2_shaft_d = 8;
+gear2_shaft_d = 13;
 gear2_shaft_r  = gear2_shaft_d/2;
 // gear2 has settable outer shaft diameter.
-gear2_shaft_outer_d = 18;
+gear2_shaft_outer_d = 8.1;
 gear2_shaft_outer_r  = gear2_shaft_outer_d/2;
 
 // gear2 has a hex bolt set in it, is either a hobbed bolt or has the nifty hobbed gear from MBI on it.
@@ -49,7 +49,7 @@ gear2_bolt_sink          = 3;
 // gear2's shaft is a bridge above the hex bolt shaft; this creates 1/3bridge_helper_h sized steps at top of shaft to help bridging.  (so bridge_helper_h/3 should be > layer height to have any effect)
 bridge_helper_h=3;
 
-gear2_rim_margin = 0;
+gear2_rim_margin = 8;
 gear2_cut_circles  = 5;
 
 // gear2 setscrew option; not likely needed.
@@ -154,7 +154,7 @@ module gearsbyteethanddistance(t1=13,t2=51, d=60, teethtwist=1, which=1)
 				gear(	twist = -g2twist, 
 					number_of_teeth=t2, 
 					circular_pitch=cp, 
-					gear_thickness = /* gear_shaft_h + */ (gear_h/2)+AT, 
+					gear_thickness = gear_shaft_h + (gear_h/2)+AT,
 					rim_thickness = (gear_h/2)+AT, 
 					rim_width = gear2_rim_margin,
 					hub_diameter = gear2_shaft_outer_d,
@@ -177,13 +177,13 @@ module gearsbyteethanddistance(t1=13,t2=51, d=60, teethtwist=1, which=1)
 		}
 			//DIFFERENCE:
 			//shafthole
-			//translate([0,0,-TT]) 
-				//cylinder(r=gear2_shaft_r, h=gear_h+gear_shaft_h+ST);
+			translate([0,0,-TT])
+				cylinder(r=gear2_shaft_r, h=gear_h+gear_shaft_h+ST);
 
 			//setscrew shaft
-			//translate([0,0,gear_h+gear_shaft_h-gear2_setscrew_offset])
-			//	rotate([0,90,0])
-			//	cylinder(r=gear2_setscrew_r, h=gear2_shaft_outer_d);
+			translate([0,0,gear_h+gear_shaft_h-gear2_setscrew_offset])
+				rotate([0,90,0])
+				cylinder(r=gear2_setscrew_r, h=gear2_shaft_outer_d);
 
 			//setscrew captive nut
 			translate([(gear2_shaft_outer_d)/2, 0, gear_h+gear_shaft_h-gear2_captive_nut_r-gear2_setscrew_offset]) 
