@@ -9,7 +9,7 @@ include <MCAD/involute_gears.scad>
 
 // WHAT TO GENERATE?
 //generate = 0;    // GENERATE BOTH GEARS FOR VIEWING
-generate = 2;    // GENERATE STEPPER GEAR FOR PRINTING
+generate = 0;    // GENERATE STEPPER GEAR FOR PRINTING
 // generate = 2;    // GENERATE DRIVE GEAR FOR PRINTING
 
 // OPTIONS COMMON TO BOTH GEARS:
@@ -45,7 +45,7 @@ gear2_shaft_outer_r  = gear2_shaft_outer_d/2;
 gear2_bolt_hex_d       = 15;
 gear2_bolt_hex_r        = gear2_bolt_hex_d/2;
 // gear2_bolt_sink: How far down the gear shaft the bolt head sits; measured as distance from drive end of gear.
-gear2_bolt_sink          = 3;		
+gear2_bolt_sink          = 0;		
 // gear2's shaft is a bridge above the hex bolt shaft; this creates 1/3bridge_helper_h sized steps at top of shaft to help bridging.  (so bridge_helper_h/3 should be > layer height to have any effect)
 bridge_helper_h=3;
 
@@ -108,11 +108,11 @@ module gearsbyteethanddistance(t1=13,t2=51, d=60, teethtwist=1, which=1)
 				gear(	twist = g1twist, 
 					number_of_teeth=t1, 
 					circular_pitch=cp, 
-					gear_thickness = gear_shaft_h + (gear_h/2)+AT, 
+					gear_thickness = /*gear_shaft_h +*/ (gear_h/2)+AT, 
 					rim_thickness = (gear_h/2)+AT, 
-					rim_width = 0,
+					//rim_width = 0,
 					hub_thickness = (gear_h/2)+AT, 
-					hub_width = 0,
+					/*hub_width = 0,*/
 					bore_diameter=0); 
 	
 			translate([0,0,(gear_h/2) + AT])
@@ -120,25 +120,28 @@ module gearsbyteethanddistance(t1=13,t2=51, d=60, teethtwist=1, which=1)
 				gear(	twist = -g1twist, 
 					number_of_teeth=t1, 
 					circular_pitch=cp, 
-					gear_thickness = (gear_h/2)+AT, 
+					gear_thickness = gear_shaft_h + (gear_h/2)+AT, 
 					rim_thickness = (gear_h/2)+AT, 
 					hub_thickness = (gear_h/2)+AT, 
+            					rim_width = 0,
+					hub_width = 0,
+
 					bore_diameter=0); 
 		}
 			//DIFFERENCE:
 			//shafthole
-			translate([0,0,-TT]) 
-				cylinder(r=gear1_shaft_r, h=gear_h+gear_shaft_h+ST);
+			translate([0,0,-2*(gear_shaft_h+ST)]) 
+				cylinder(r=gear1_shaft_r, h=2*(gear_h+gear_shaft_h+ST));
 
 			//setscrew shaft
-			translate([0,0,gear_h+gear_shaft_h-gear1_setscrew_offset])
+			translate([0,0, (-gear_h/2  - gear_shaft_h/2+gear1_setscrew_offset)])
 				rotate([0,90,0])
 				cylinder(r=gear1_setscrew_r, h=g1p_r);
 
 			//setscrew captive nut
-			translate([(g1p_r)/2, 0, gear_h+gear_shaft_h-gear1_captive_nut_r-gear1_setscrew_offset]) 
+			translate([(g1p_r)/2, 0, -(gear_h+gear_shaft_h-gear1_captive_nut_r-gear1_setscrew_offset)]) 
 				translate([0,0,(gear1_captive_nut_r+gear1_setscrew_offset)/2])
-					#cube([gear1_captive_nut_h, gear1_captive_nut_d, gear1_captive_nut_r+gear1_setscrew_offset+ST],center=true);
+					cube([gear1_captive_nut_h, gear1_captive_nut_d, gear1_captive_nut_r+gear1_setscrew_offset+ST],center=true);
 			
 		
 		}
@@ -154,7 +157,7 @@ module gearsbyteethanddistance(t1=13,t2=51, d=60, teethtwist=1, which=1)
 				gear(	twist = -g2twist, 
 					number_of_teeth=t2, 
 					circular_pitch=cp, 
-					gear_thickness = gear_shaft_h + (gear_h/2)+AT,
+					gear_thickness = /*gear_shaft_h +*/(gear_h/2)+AT,
 					rim_thickness = (gear_h/2)+AT, 
 					rim_width = gear2_rim_margin,
 					hub_diameter = gear2_shaft_outer_d,
@@ -167,7 +170,7 @@ module gearsbyteethanddistance(t1=13,t2=51, d=60, teethtwist=1, which=1)
 				gear(	twist = g2twist, 
 					number_of_teeth=t2, 
 					circular_pitch=cp, 
-					gear_thickness = (gear_h/2)+AT, 
+					gear_thickness = gear_shaft_h +(gear_h/2)+AT, 
 					rim_thickness = (gear_h/2)+AT, 
 					rim_width = gear2_rim_margin,
 					hub_diameter = gear2_shaft_outer_d,
@@ -177,8 +180,8 @@ module gearsbyteethanddistance(t1=13,t2=51, d=60, teethtwist=1, which=1)
 		}
 			//DIFFERENCE:
 			//shafthole
-			translate([0,0,-TT])
-				cylinder(r=gear2_shaft_r, h=gear_h+gear_shaft_h+ST);
+			translate([0,0,-gear_h-TT])
+				cylinder(r=gear2_shaft_r, h=2*(gear_h+gear_shaft_h+ST));
 
 			//setscrew shaft
 			translate([0,0,gear_h+gear_shaft_h-gear2_setscrew_offset])
@@ -188,7 +191,7 @@ module gearsbyteethanddistance(t1=13,t2=51, d=60, teethtwist=1, which=1)
 			//setscrew captive nut
 			translate([(gear2_shaft_outer_d)/2, 0, gear_h+gear_shaft_h-gear2_captive_nut_r-gear2_setscrew_offset]) 
 				translate([0,0,(gear2_captive_nut_r+gear2_setscrew_offset)/2])
-					#cube([gear2_captive_nut_h, gear2_captive_nut_d, gear2_captive_nut_r+gear2_setscrew_offset+ST],center=true);
+					cube([gear2_captive_nut_h, gear2_captive_nut_d, gear2_captive_nut_r+gear2_setscrew_offset+ST],center=true);
 
 			//trim shaft
 			//difference()
@@ -198,7 +201,8 @@ module gearsbyteethanddistance(t1=13,t2=51, d=60, teethtwist=1, which=1)
 			//}
 
 			//hex bolt shaft
-			translate([0,0,-TT]) cylinder(r=gear2_bolt_hex_r, h=gear_h+gear_shaft_h-gear2_bolt_sink+AT,$fn=6);
+			translate([0,0,-gear_h-TT]) 
+               cylinder(r=gear2_bolt_hex_r, h=gear_h+gear_shaft_h-gear2_bolt_sink+AT,$fn=6);
 
 		}
 
