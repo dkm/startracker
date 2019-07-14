@@ -1,0 +1,29 @@
+== Creative Commons - Attribution
+
+Following files come from https://www.thingiverse.com/thing:974906/files :
+- slide_bar.stl (extraced from ancillary_items.stl)
+- slide_head.stl (extraced from ancillary_items.stl)
+
+This work is licensed under the Creative Commons Attribution 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by/3.0/ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+== Creative Commons - Attribution-NonCommercial 3.0
+
+- 3d_models/box.scad
+
+This work is licensed under the Creative Commons Attribution-NonCommercial 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/3.0/ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+"""
+ FB Aka Heartman/Hearty 2016     -
+ http://heartygfx.blogspot.com    -
+ OpenScad Parametric Box      -
+ CC BY-NC 3.0 License       -
+"""
+
+== BSD
+
+- 3d_models/gears.scad
+
+"""
+Herringbone Wade's Gears Script
+(c) 2011, Christopher "ScribbleJ" Jansen
+"""
