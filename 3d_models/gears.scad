@@ -4,6 +4,9 @@
 // Thanks to Greg Frost for his great "Involute Gears" script.
 //
 // Licensed under the BSD license.
+
+$fn = 100;
+
 include <MCAD/involute_gears.scad> 
 
 
