@@ -21,7 +21,7 @@ gear_shaft_h = 6;
 // GEAR1 (SMALLER GEAR, STEPPER GEAR) OPTIONS:
 // It's helpful to choose prime numbers for the gear teeth.
 gear1_teeth = 13;
-gear1_shaft_d = 5.5;  			// diameter of motor shaft
+gear1_shaft_d = 5.1;  			// diameter of motor shaft
 gear1_shaft_r  = gear1_shaft_d/2;	
 // gear1 shaft assumed to fill entire gear.
 // gear1 attaches by means of a captive nut and bolt (or actual setscrew)
