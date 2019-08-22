@@ -24,6 +24,12 @@ static const float initial_rod_deploy = 30;
 /* millimeters per rotation of the threaded-rod */
 static const float bolt_thread_mm = 1.25;
 
+/* If true, the hinge is getting opened. If false, hinge is getting
+   closed.  When hinge is closing, gravity is helping. When opening,
+   motor is working against gravity.
+*/
+static const bool hinge_opening = true;
+
 /* When using debug over UART */
 static const unsigned long serial_speed = 115200UL;
 

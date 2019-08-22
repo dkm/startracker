@@ -131,8 +131,18 @@ static void debug_long(rot_state_t *s){
 }
 #endif
 
-static float get_expected_stepper_rot(rot_state_t *s) {
-  const float r = tan(earth_rot_speed_rad_msec * s->elapsed_time_millis /* ellapsed_in_sec */)
+
+
+// Returns the value in radian the motor should have turned to reach
+// the current value of earth rotation since the beggining.
+static float
+get_expected_stepper_rot(rot_state_t *s)
+{
+  float a = earth_rot_speed_rad_msec * s->elapsed_time_millis /* ellapsed_in_sec */;
+  if (!hinge_opening)
+    a = 1.57079632679 /* PI/2 */ - a;
+
+  const float r = tan(a)
     * axis_hinge_dist_mm
     * 2 * PI
     * nr_teeth_big
@@ -143,10 +153,10 @@ static float get_expected_stepper_rot(rot_state_t *s) {
 #if MODERATE_DEBUG
   if (!(loop_count % 100)) {
 #endif
-  debug_long(s);
+    debug_long(s);
 
-  Serial.print("Angle final: ");
-  Serial.println(r);
+    Serial.print("Angle final: ");
+    Serial.println(r);
 
 #if MODERATE_DEBUG
   }
@@ -155,7 +165,12 @@ static float get_expected_stepper_rot(rot_state_t *s) {
   return r;
 }
 
-static unsigned int get_step_number(rot_state_t *s, float expected_rotation) {
+// Returns the number of steps and the direction needed to reach given
+// rotation angle in radian.
+
+static int
+get_step_number(rot_state_t *s, float expected_rotation)
+{
   const float angle_diff = expected_rotation - s->stepper_gear_rot_rad;
   const float fsteps = angle_diff / stepper_gear_rad_per_step;
   const int steps = floor(fsteps);
@@ -180,8 +195,11 @@ static unsigned int get_step_number(rot_state_t *s, float expected_rotation) {
   return steps;
 }
 
-static void set_stepper_rotation(rot_state_t *s, float angle){
-  const unsigned int needed_steps = get_step_number(s, angle);
+// Make the motor move to desired angle
+static void
+set_stepper_rotation(rot_state_t *s, float angle)
+{
+  const int needed_steps = get_step_number(s, angle);
   if (stepper_direction) {
     stepper.move(needed_steps);
   } else {
@@ -191,8 +209,9 @@ static void set_stepper_rotation(rot_state_t *s, float angle){
   s->stepper_gear_rot_rad += needed_steps * stepper_gear_rad_per_step;
 }
 
-
-static void start_timer(unsigned long period) {
+static void
+start_timer(unsigned long period)
+{
 #if DEBUG
   Serial.println("start timer");
 #endif
@@ -210,7 +229,9 @@ static void start_timer(unsigned long period) {
 
 }
 
-static void stop_timer(void) {
+static void
+stop_timer(void)
+{
   if (use_active_wait){
     active_timer.deadline = active_timer.remain = 0;
   }
@@ -219,7 +240,9 @@ static void stop_timer(void) {
   // disable timer
 }
 
-static void handle_active_timer(void){
+static void
+handle_active_timer(void)
+{
 
 #if DEBUG == 2
   Serial.print("Timer: ");
@@ -277,7 +300,9 @@ static bool new_state = true;
 
 #endif
 
-static void control_automata(void) {
+static void
+control_automata(void)
+{
 
 #if DEBUG == 2
   Serial.println("Automata step...");
@@ -381,7 +406,9 @@ static void control_automata(void) {
 
 }
 
-void setup() {
+void
+setup()
+{
   // debug output
   Serial.begin(serial_speed);
 
@@ -415,7 +442,9 @@ void setup() {
   dwprint("Setup finished, starting loop");
 }
 
-void loop(void) {
+void
+loop(void)
+{
   if (use_active_wait)
     handle_active_timer();
 
