@@ -72,15 +72,32 @@ static const float stepper_gear_rad_per_step = (2*PI) / nr_steps;
 static unsigned int loop_count = 0;
 #endif
 
-// this needs to be reset
-static struct rot_state_t {
+struct rot_state_t {
   unsigned long elapsed_time_millis;
   float stepper_gear_rot_rad = 0;
-} rot_state;
+};
 
+static float get_expected_stepper_rot(rot_state_t *s);
+
+// The init function simply skips time from the 0 (hinge is closed) to
+// the initial state configured by the initial_rod_deploy value.  When
+// hinge is opening, it's really simply skipping time. When hinge is
+// closing, there is a change in reference for the angle.
+//
+// If hinge opening mode, angle here is simply the angle formed by the
+// moving plate and the fixed plate, constrained by the initial rod
+// deployment.
+//
+// In hinge closing mode, angle is computed the same way, but the
+// reference is still 0 with the earth rotation growing, so we take
+// the complementary (PI - a).
 static void init_rot_state(struct rot_state_t *state) {
-  rot_state.stepper_gear_rot_rad = 0;
-  rot_state.elapsed_time_millis = atan(initial_rod_deploy / axis_hinge_dist_mm);
+  if (hinge_opening)
+    state->elapsed_time_millis = atan(initial_rod_deploy / axis_hinge_dist_mm) / earth_rot_speed_rad_msec;
+  else
+    state->elapsed_time_millis = (PI - atan(initial_rod_deploy / axis_hinge_dist_mm)) / earth_rot_speed_rad_msec;
+
+  state->stepper_gear_rot_rad = get_expected_stepper_rot(state);
 }
 
 static const unsigned int btn1_pin = 8;
@@ -131,16 +148,15 @@ static void debug_long(rot_state_t *s){
 }
 #endif
 
-
-
 // Returns the value in radian the motor should have turned to reach
 // the current value of earth rotation since the beggining.
 static float
 get_expected_stepper_rot(rot_state_t *s)
 {
   float a = earth_rot_speed_rad_msec * s->elapsed_time_millis /* ellapsed_in_sec */;
-  if (!hinge_opening)
-    a = 1.57079632679 /* PI/2 */ - a;
+
+  if (hinge_opening)
+    a = PI - a;
 
   const float r = tan(a)
     * axis_hinge_dist_mm
@@ -165,16 +181,27 @@ get_expected_stepper_rot(rot_state_t *s)
   return r;
 }
 
+// Returns the length of the rod really deployed.
+static float
+get_rod_deploy (rot_state_t *s)
+{
+  float a = s->elapsed_time_millis * earth_rot_speed_rad_msec;
+
+  if (!hinge_opening)
+    a = PI - a;
+
+  return tan(a) * axis_hinge_dist_mm;
+}
+
 // Returns the number of steps and the direction needed to reach given
 // rotation angle in radian.
-
 static int
 get_step_number(rot_state_t *s, float expected_rotation)
 {
   const float angle_diff = expected_rotation - s->stepper_gear_rot_rad;
   const float fsteps = angle_diff / stepper_gear_rad_per_step;
   const int steps = floor(fsteps);
-  
+
 #if DEBUG
   Serial.print("current rot:");
   Serial.println(s->stepper_gear_rot_rad, 6);
@@ -292,13 +319,16 @@ static bool new_state = true;
     new_state = true;				\
     control_state = name;			\
   } while(0)
-    
+
 #else
 #define STATE(name)
 #define NEXT_STATE(name)			\
   control_state = name;
 
 #endif
+
+// this needs to be reset
+static struct rot_state_t rot_state;
 
 static void
 control_automata(void)
@@ -353,6 +383,11 @@ control_automata(void)
     STATE(RUN);
     if (button1Switch.pushed()) {
       dwprint("Short press RUN => IDLE");
+      stop_timer();
+      stepper.disable();
+      NEXT_STATE(IDLE);
+    } else if (get_rod_deploy(&rot_state) < min_rod_deploy) {
+      dwprint("Min value for hinge reached, RUN => IDLE");
       stop_timer();
       stepper.disable();
       NEXT_STATE(IDLE);

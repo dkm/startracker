@@ -21,6 +21,9 @@ static const float axis_hinge_dist_mm = 200;
 /* Initial deployment of threaded rod in millimeters */
 static const float initial_rod_deploy = 30;
 
+/* Smallest value for hinge. Going lower would damage the gears/motors */
+static const float min_rod_deploy = 30;
+
 /* millimeters per rotation of the threaded-rod */
 static const float bolt_thread_mm = 1.25;
 
