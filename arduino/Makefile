@@ -21,6 +21,9 @@ ARDUINO_DIR ?= $(HOME)/arduino/arduino-1.8.9
 
 USER_LIB_PATH := $(PWD)
 
+# for flashing
+AVRDUDE_ARD_BAUDRATE = 57600
+
 # We don't need exact math. Let gcc be a bit more agressive.
 CFLAGS += -ffast-math
 CXXFLAGS += -ffast-math
